@@ -64,3 +64,5 @@ local.properties
 ### Eclipse Patch ###
 # Spring Boot Tooling
 .sts4-cache/
+LED_NucleoFlash/.settings/language.settings.xml
+LED_NucleoFlash/.settings/stm32cubeide.project.prefs
