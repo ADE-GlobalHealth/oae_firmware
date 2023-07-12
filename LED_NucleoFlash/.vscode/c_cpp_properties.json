@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/Drivers/STM32L4xx_HAL_Driver/Inc"
+                "${workspaceFolder}/Drivers/STM32L4xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Core/Inc"
             ],
             "defines": [
                 "_DEBUG",
