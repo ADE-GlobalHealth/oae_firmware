@@ -87,6 +87,7 @@ target_link_options(
 
 target_sources(
     ${TARGET_NAME} PRIVATE
+    "Core\\Src\\func.c"
     "Core\\Src\\main.c"
     "Core\\Src\\stm32l4xx_hal_msp.c"
     "Core\\Src\\stm32l4xx_it.c"
@@ -95,6 +96,8 @@ target_sources(
     "Core\\Src\\system_stm32l4xx.c"
     "Core\\Startup\\startup_stm32l432kcux.s"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_cortex.c"
+    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_dac_ex.c"
+    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_dac.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_dma_ex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_dma.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_exti.c"
@@ -108,8 +111,6 @@ target_sources(
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_rcc.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_tim_ex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_tim.c"
-    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_uart_ex.c"
-    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_uart.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal.c"
 )
 

@@ -1,4 +1,6 @@
 {
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-  "cmake.configureOnOpen": true
+  "cmake.configureOnOpen": true,
+  "stm32-for-vscode.openOCDPath": "C:\\USERS\\VESWARANANDAM\\APPDATA\\ROAMING\\CODE\\USER\\GLOBALSTORAGE\\BMD.STM32-FOR-VSCODE\\@XPACK-DEV-TOOLS\\OPENOCD\\0.12.0-1.1\\.CONTENT\\BIN\\OPENOCD.EXE",
+  "stm32-for-vscode.makePath": "C:\\USERS\\VESWARANANDAM\\APPDATA\\ROAMING\\CODE\\USER\\GLOBALSTORAGE\\BMD.STM32-FOR-VSCODE\\@XPACK-DEV-TOOLS\\WINDOWS-BUILD-TOOLS\\4.4.0-1.1\\.CONTENT\\BIN\\MAKE.EXE"
 }
