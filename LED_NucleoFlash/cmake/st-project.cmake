@@ -87,7 +87,6 @@ target_link_options(
 
 target_sources(
     ${TARGET_NAME} PRIVATE
-    "Core\\Src\\func.c"
     "Core\\Src\\main.c"
     "Core\\Src\\stm32l4xx_hal_msp.c"
     "Core\\Src\\stm32l4xx_it.c"
@@ -112,6 +111,7 @@ target_sources(
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_tim_ex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_tim.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal.c"
+    "app\\app_main.c"
 )
 
 add_custom_command(
