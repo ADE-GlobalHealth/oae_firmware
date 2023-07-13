@@ -29,8 +29,28 @@ For easier debugging, install [Embedded Tools](https://marketplace.visualstudio.
 
 Open the STM32 sidebar, then click import local project and select LED_NucleoFlash/.cproject.
 
-After everything has finished downloading, restart VS Code and in the status bar, from right to left, select the debug preset, the debug preset again, LED_NucleoFlash, LED_NucleoFlash again, and Default.
+After everything has finished downloading, restart VS Code.
 
+Run `cmake-gui`.
+
+Configure the following settings:
+
+- Select LED_NucleoFlash as the source code directory
+- Select the preset debug
+- Select LED_NucleoFlash/build/debug/build
+
+![Image of example cmake-gui configuration](cmake-gui.png)
+(your paths may be slightly different)
+
+Select "Configure", then "Generate". Close cmake-gui and go back to VS code.
+
+In the status bar, from right to left, select the debug preset, the debug preset again, LED_NucleoFlash, LED_NucleoFlash again, and Default.
+
+![Image of VS Code status bar](vscode-toolbar.png)
+
+If you select the CMake side panel, it should populate with some files. Select build all in the outline or press `ctrl+shift+B`
+
+You should see some output in your terminal. Once finished, you will have the path to a .elf file that represents the compiled firmware.
 ## Edit
 
 Open STM32CubeIDE and unfold LED_NucleoFlash.

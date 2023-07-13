@@ -5,10 +5,15 @@
   "stm32-for-vscode.makePath": "C:\\USERS\\VESWARANANDAM\\APPDATA\\ROAMING\\CODE\\USER\\GLOBALSTORAGE\\BMD.STM32-FOR-VSCODE\\@XPACK-DEV-TOOLS\\WINDOWS-BUILD-TOOLS\\4.4.0-1.1\\.CONTENT\\BIN\\MAKE.EXE",
   "C_Cpp.errorSquiggles": "enabled",
   "files.associations": {
-    "main.h": "c"
+    "main.h": "c",
+    "stm32l4xx_hal_def.h": "c",
+    "stddef.h": "c"
   },
   "makefile.makePath": "C:\\USERS\\VESWARANANDAM\\APPDATA\\ROAMING\\CODE\\USER\\GLOBALSTORAGE\\BMD.STM32-FOR-VSCODE\\@XPACK-DEV-TOOLS\\WINDOWS-BUILD-TOOLS\\4.4.0-1.1\\.CONTENT\\BIN\\MAKE.EXE",
   "cSpell.words": [
+    "cppdbg",
+    "cubeprogrammer",
+    "gdbserver",
     "GPIO",
     "GPIOB",
     "hdac",
