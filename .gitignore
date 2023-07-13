@@ -57,3 +57,5 @@ _deps
 .ninja_log
 
 .cmake
+
+build/
