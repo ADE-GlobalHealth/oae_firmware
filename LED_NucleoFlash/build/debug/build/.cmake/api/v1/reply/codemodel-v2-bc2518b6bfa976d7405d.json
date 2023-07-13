@@ -1,0 +1,59 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "LED_NucleoFlash",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "LED_NucleoFlash::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-LED_NucleoFlash-Debug-fceb71c881451e8d431d.json",
+					"name" : "LED_NucleoFlash",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/veswaranandam/OneDrive - Olin College of Engineering/Desktop/ADE Global Health/oae_firmware/LED_NucleoFlash/build/debug/build",
+		"source" : "C:/Users/veswaranandam/OneDrive - Olin College of Engineering/Desktop/ADE Global Health/oae_firmware/LED_NucleoFlash"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 2
+	}
+}

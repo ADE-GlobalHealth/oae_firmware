@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "cmake",
+      "command": "build",
+      "problemMatcher": "$gcc",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Flash - debug",
+      "type": "shell",
+      "command": "STM32_Programmer_CLI -c port=SWD freq=4000 -w .\\LED_NucleoFlash.elf -rst",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceRoot}\\build\\debug\\build"
+      }
+    },
+    {
+      "label": "Flash - release",
+      "type": "shell",
+      "command": "STM32_Programmer_CLI -c port=SWD freq=4000 -w .\\LED_NucleoFlash.elf -rst",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceRoot}\\build\\release\\build"
+      }
+    },
+  ]
+}
