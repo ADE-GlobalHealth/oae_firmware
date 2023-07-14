@@ -55,6 +55,6 @@ _deps
 
 build/
 
-LED_NucleoFlash.map
-LED_NucleoFlash.list
-LED_NucleoFlash.elf
+Debug/
+
+*.launch
