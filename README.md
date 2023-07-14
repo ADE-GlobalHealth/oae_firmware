@@ -36,16 +36,15 @@ Run `cmake-gui`. (install it if you don't have it already, you might need sudo)
 Configure the following settings:
 
 - Select LED_NucleoFlash as the source code directory
-- Select the preset debug
-- Select LED_NucleoFlash/build/debug/build
+- Select the preset debug (then release for the second time)
+- Select LED_NucleoFlash/build/debug/build (then LED_NucleoFlash/build/release/build for the second time)
 
 ![Image of example cmake-gui configuration](cmake-gui.png)
 (your paths may be slightly different)
 
-Select "Configure", then "Generate". Close cmake-gui and go back to VS code.
+Select "Configure", then "Generate". Go through the steps above for the release preset. Close cmake-gui and go back to VS code.
 
-In the status bar, from right to left, select the debug preset, the debug preset again, LED_NucleoFlash, LED_NucleoFlash again, and Default.
-
+Select the profiles you want in the status bar:
 ![Image of VS Code status bar](vscode-toolbar.png)
 
 If you select the CMake side panel, it should populate with some files. Select build all in the outline or press `ctrl+shift+B`
