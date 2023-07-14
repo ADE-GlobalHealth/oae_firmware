@@ -14,7 +14,7 @@
     {
       "label": "Flash - debug",
       "type": "shell",
-      "command": "STM32_Programmer_CLI -c port=SWD freq=4000 -w .\\LED_NucleoFlash.elf -rst",
+      "command": "STM32_Programmer_CLI -c port=SWD freq=4000 -w LED_NucleoFlash.elf -rst",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -24,13 +24,13 @@
         "clear": false
       },
       "options": {
-        "cwd": "${workspaceRoot}\\build\\debug\\build"
+        "cwd": "${workspaceRoot}/build/debug/build"
       }
     },
     {
       "label": "Flash - release",
       "type": "shell",
-      "command": "STM32_Programmer_CLI -c port=SWD freq=4000 -w .\\LED_NucleoFlash.elf -rst",
+      "command": "STM32_Programmer_CLI -c port=SWD freq=4000 -w LED_NucleoFlash.elf -rst",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -40,7 +40,7 @@
         "clear": false
       },
       "options": {
-        "cwd": "${workspaceRoot}\\build\\release\\build"
+        "cwd": "${workspaceRoot}/build/release/build"
       }
     },
   ]
