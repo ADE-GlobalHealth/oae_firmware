@@ -58,3 +58,5 @@ build/
 Debug/
 
 *.launch
+
+LED_NucleoFlash/cmake/st-project.cmake
