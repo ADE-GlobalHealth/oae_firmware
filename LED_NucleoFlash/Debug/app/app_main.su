@@ -1,2 +1,2 @@
-../app/app_main.c:10:6:app_setup	528	static
-../app/app_main.c:27:6:app_loop	8	static
+../app/app_main.c:11:6:app_setup	928	static
+../app/app_main.c:32:6:app_loop	8	static

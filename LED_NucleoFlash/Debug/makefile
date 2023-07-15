@@ -11,6 +11,22 @@ RM := rm -rf
 -include sources.mk
 -include app/subdir.mk
 -include Drivers/STM32L4xx_HAL_Driver/Src/subdir.mk
+-include Drivers/CMSIS/DSP/Source/WindowFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/TransformFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/SupportFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/StatisticsFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/SVMFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/QuaternionMathFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/MatrixFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/InterpolationFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/FilteringFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/FastMathFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/DistanceFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/ControllerFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/ComplexMathFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/CommonTables/subdir.mk
+-include Drivers/CMSIS/DSP/Source/BayesFunctions/subdir.mk
+-include Drivers/CMSIS/DSP/Source/BasicMathFunctions/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
 -include objects.mk
@@ -76,8 +92,8 @@ all: main-build
 main-build: LED_NucleoFlash.elf secondary-outputs
 
 # Tool invocations
-LED_NucleoFlash.elf LED_NucleoFlash.map: $(OBJS) $(USER_OBJS) /home/venkadesh/Desktop/ADE\ Global\ Health/oae_firmware/LED_NucleoFlash/STM32L432KCUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "LED_NucleoFlash.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/venkadesh/Desktop/ADE Global Health/oae_firmware/LED_NucleoFlash/STM32L432KCUX_FLASH.ld" -Wl,-Map="LED_NucleoFlash.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+LED_NucleoFlash.elf LED_NucleoFlash.map: $(OBJS) $(USER_OBJS) C:\Users\veswaranandam\OneDrive\ -\ Olin\ College\ of\ Engineering\Desktop\ADE\ Global\ Health\oae_firmware\LED_NucleoFlash\STM32L432KCUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-g++ -o "LED_NucleoFlash.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\veswaranandam\OneDrive - Olin College of Engineering\Desktop\ADE Global Health\oae_firmware\LED_NucleoFlash\STM32L432KCUX_FLASH.ld" -Wl,-Map="LED_NucleoFlash.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
