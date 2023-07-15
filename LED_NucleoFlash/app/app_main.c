@@ -26,6 +26,7 @@ void app_setup(){
     float32_t aFFT_Input_Q15[50];
     #define FFT_Length  1024
     arm_float_to_q15((float32_t *)&FFT_Input_Q15_f[0], (q15_t *)&aFFT_Input_Q15[0], FFT_Length*2);
+    arm_hamming_f32((float32_t *)&FFT_Input_Q15_f[0], FFT_Length);
 }
 
 //Runs repeatedly after app_setup() has finished
