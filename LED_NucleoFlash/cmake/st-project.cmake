@@ -165,7 +165,6 @@ target_sources(
     "Drivers\\CMSIS\\DSP\\Source\\CommonTables\\arm_const_structs.c"
     "Drivers\\CMSIS\\DSP\\Source\\CommonTables\\arm_mve_tables_f16.c"
     "Drivers\\CMSIS\\DSP\\Source\\CommonTables\\arm_mve_tables.c"
-    "Drivers\\CMSIS\\DSP\\Source\\CommonTables\\CommonTablesF16.c"
     "Drivers\\CMSIS\\DSP\\Source\\ComplexMathFunctions\\arm_cmplx_conj_f16.c"
     "Drivers\\CMSIS\\DSP\\Source\\ComplexMathFunctions\\arm_cmplx_conj_f32.c"
     "Drivers\\CMSIS\\DSP\\Source\\ComplexMathFunctions\\arm_cmplx_conj_q15.c"

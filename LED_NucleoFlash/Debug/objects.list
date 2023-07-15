@@ -75,7 +75,6 @@
 "./Drivers/CMSIS/DSP/Source/BasicMathFunctions/arm_xor_u8.o"
 "./Drivers/CMSIS/DSP/Source/BayesFunctions/arm_gaussian_naive_bayes_predict_f16.o"
 "./Drivers/CMSIS/DSP/Source/BayesFunctions/arm_gaussian_naive_bayes_predict_f32.o"
-"./Drivers/CMSIS/DSP/Source/CommonTables/CommonTablesF16.o"
 "./Drivers/CMSIS/DSP/Source/CommonTables/arm_common_tables.o"
 "./Drivers/CMSIS/DSP/Source/CommonTables/arm_common_tables_f16.o"
 "./Drivers/CMSIS/DSP/Source/CommonTables/arm_const_structs.o"
