@@ -7,11 +7,11 @@
 C_SRCS += \
 ../app/app_main.c 
 
-C_DEPS += \
-./app/app_main.d 
-
 OBJS += \
 ./app/app_main.o 
+
+C_DEPS += \
+./app/app_main.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

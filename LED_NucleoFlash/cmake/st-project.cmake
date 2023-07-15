@@ -89,13 +89,6 @@ target_link_options(
 
 target_sources(
     ${TARGET_NAME} PRIVATE
-    "Core\\Src\\main.c"
-    "Core\\Src\\stm32l4xx_hal_msp.c"
-    "Core\\Src\\stm32l4xx_it.c"
-    "Core\\Src\\syscalls.c"
-    "Core\\Src\\sysmem.c"
-    "Core\\Src\\system_stm32l4xx.c"
-    "Core\\Startup\\startup_stm32l432kcux.s"
     "Drivers\\CMSIS\\DSP\\Source\\BasicMathFunctions\\arm_abs_f16.c"
     "Drivers\\CMSIS\\DSP\\Source\\BasicMathFunctions\\arm_abs_f32.c"
     "Drivers\\CMSIS\\DSP\\Source\\BasicMathFunctions\\arm_abs_f64.c"
@@ -739,10 +732,19 @@ target_sources(
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_pwr.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_rcc_ex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_rcc.c"
+    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_sai_ex.c"
+    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_sai.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_tim_ex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_tim.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal.c"
     "app\\app_main.c"
+    "Core\\Src\\main.c"
+    "Core\\Src\\stm32l4xx_hal_msp.c"
+    "Core\\Src\\stm32l4xx_it.c"
+    "Core\\Src\\syscalls.c"
+    "Core\\Src\\sysmem.c"
+    "Core\\Src\\system_stm32l4xx.c"
+    "Core\\Startup\\startup_stm32l432kcux.s"
 )
 
 add_custom_command(

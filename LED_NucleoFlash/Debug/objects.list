@@ -649,6 +649,8 @@
 "./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.o"
 "./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.o"
 "./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.o"
+"./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_sai.o"
+"./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_sai_ex.o"
 "./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.o"
 "./Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.o"
 "./app/app_main.o"
