@@ -38,8 +38,8 @@ local.properties
 # Spring Boot Tooling
 
 .sts4-cache/
-LED_NucleoFlash/.settings/language.settings.xml
-LED_NucleoFlash/.settings/stm32cubeide.project.prefs
+.settings/language.settings.xml
+.settings/stm32cubeide.project.prefs
 
 CMakeLists.txt.user
 CMakeCache.txt
@@ -57,3 +57,7 @@ _deps
 .ninja_log
 
 .cmake
+
+# Generated Code
+Debug
+Release
