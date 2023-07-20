@@ -52,3 +52,15 @@ _deps
 Debug
 Release
 build/
+
+# VS Code Generated files
+*/CMakeLists.txt
+*/CMakePresets.json
+*/vcpkg-configuration.json
+*/.vs/launch.vs.json
+*/.vscode/extensions.json
+*/.vscode/launch.json
+*/.vscode/settings.json
+*/.vscode/tasks.json
+*/cmake/gcc-arm-none-eabi.cmake
+*/cmake/st-project.cmake
