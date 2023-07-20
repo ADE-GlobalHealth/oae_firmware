@@ -96,7 +96,7 @@ int main(void)
   MX_DAC1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  setup();
+  app_setup();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -104,8 +104,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	loop();
     /* USER CODE BEGIN 3 */
+	app_loop();
   }
   /* USER CODE END 3 */
 }
