@@ -15,17 +15,8 @@ local.properties
 # External tool builders
 .externalToolBuilders/
 
-# Locally stored "Eclipse launch configurations"
-*.launch
-
 # PyDev specific (Python IDE for Eclipse)
 *.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
-.cproject
-
-# CDT- autotools
-.autotools
 
 # Code Recommenders
 .recommenders/
@@ -46,7 +37,6 @@ CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
@@ -61,3 +51,4 @@ _deps
 # Generated Code
 Debug
 Release
+build/
