@@ -15,17 +15,8 @@ local.properties
 # External tool builders
 .externalToolBuilders/
 
-# Locally stored "Eclipse launch configurations"
-*.launch
-
 # PyDev specific (Python IDE for Eclipse)
 *.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
-.cproject
-
-# CDT- autotools
-.autotools
 
 # Code Recommenders
 .recommenders/
@@ -38,15 +29,14 @@ local.properties
 # Spring Boot Tooling
 
 .sts4-cache/
-LED_NucleoFlash/.settings/language.settings.xml
-LED_NucleoFlash/.settings/stm32cubeide.project.prefs
+.settings/language.settings.xml
+.settings/stm32cubeide.project.prefs
 
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
@@ -57,3 +47,20 @@ _deps
 .ninja_log
 
 .cmake
+
+# Generated Code
+Debug
+Release
+build/
+
+# VS Code Generated files
+*/CMakeLists.txt
+*/CMakePresets.json
+*/vcpkg-configuration.json
+*/.vs/launch.vs.json
+*/.vscode/extensions.json
+*/.vscode/launch.json
+*/.vscode/settings.json
+*/.vscode/tasks.json
+*/cmake/gcc-arm-none-eabi.cmake
+*/cmake/st-project.cmake
