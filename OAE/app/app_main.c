@@ -18,7 +18,7 @@ extern TIM_HandleTypeDef htim2;
 
 //Runs once after all peripherals are initialized
 void app_setup(){
-    uint16_t Wave_LUT[NS] = {
+    uint32_t Wave_LUT[NS] = {
             2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
             3431, 3504, 3574, 3639, 3701, 3759, 3812, 3861, 3906, 3946, 3982, 4013, 4039, 4060, 4076,
             4087, 4094, 4095, 4091, 4082, 4069, 4050, 4026, 3998, 3965, 3927, 3884, 3837, 3786, 3730,
@@ -48,16 +48,29 @@ void app_setup(){
 //Runs repeatedly after app_setup() has finished
 void app_loop() {
     HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-    HAL_Delay(1000);
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(1000);
     HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
     HAL_Delay(100);
     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(1000);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    HAL_Delay(100);
     HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    HAL_Delay(100);
+
+    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
     HAL_Delay(100);
 }
 

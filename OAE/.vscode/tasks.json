@@ -11,7 +11,6 @@
         "isDefault": true
       }
     },
-    
     {
       "label": "Flash - debug",
       "type": "shell",
@@ -26,7 +25,8 @@
       },
       "options": {
         "cwd": "${workspaceRoot}/build/debug/build"
-      }
+      },
+      "problemMatcher": []
     },
     {
       "label": "Flash - release",
@@ -43,6 +43,6 @@
       "options": {
         "cwd": "${workspaceRoot}/build/release/build"
       }
-    },
+    }
   ]
 }
