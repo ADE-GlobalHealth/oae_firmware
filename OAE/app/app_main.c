@@ -34,6 +34,7 @@ HAL_FLASH_Unlock();
 //   uint32_t  errorStatus = 0;
 
 //   HAL_FLASHEx_Erase(&FLASH_EraseInitStruct,&errorStatus);
+blink_code(B_READ_SUCCESS);
     uint64_t FData = 0xFFFFFFFFFFFFFFFF;
 HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD,0x0801FC00, FData);
 CLEAR_BIT (FLASH->CR, (FLASH_CR_PER));
@@ -101,3 +102,24 @@ void wavegen(){
 }
 
 void noop() {}
+
+void blink_code(uint8_t bitmask){
+    // Sets the LEDs to a binary representation of the lower 3 bits of bitmask
+    if (bitmask & 0b0001) HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
+    else HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
+    if ((bitmask & 0b0010) >> 1) HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+    else HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+    if ((bitmask & 0b0100) >> 2) HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
+    else HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+}
+
+void blink_code_clear(){
+    blink_code(0b0000);
+}
+
+enum blink_status {
+    B_SETUP = 0b101,
+    B_ERROR = 0b010,
+    B_WRITE_SUCCESS = 0b111,
+    B_READ_SUCCESS = 0b001
+};
