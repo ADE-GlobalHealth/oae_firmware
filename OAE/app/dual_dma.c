@@ -3,6 +3,14 @@
 // See: https://community.st.com/t5/stm32-mcu-products/can-stm32cube-configure-the-dac-in-synchronous-dual-mode-with/td-p/469433
 // And: https://community.st.com/t5/stm32-mcu-products/how-to-use-two-dac-channels-simultaneously/td-p/210588
 
+/*
+Configuration prerequisites:
+1. Set both outputs of DAC1 to external pin
+2. Set both DACs to the same timer out trigger event
+3. Set a channel 1 DAC DMA request to DMA1 channel 3.
+4. Configure the DMA for word lenght data for both peripheral and memory, 
+  set increment on memory only, and set buffer to circular mode.
+*/
 HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
   DAC_HandleTypeDef * hdac, uint32_t Channel, uint32_t * pData, uint32_t Length, uint32_t Alignment) {
   uint32_t tmpreg = 0;
