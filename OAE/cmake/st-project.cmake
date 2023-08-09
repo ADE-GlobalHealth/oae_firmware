@@ -715,8 +715,6 @@ target_sources(
     "Drivers\\CMSIS\\DSP\\Source\\WindowFunctions\\arm_nuttall4c_f64.c"
     "Drivers\\CMSIS\\DSP\\Source\\WindowFunctions\\arm_welch_f32.c"
     "Drivers\\CMSIS\\DSP\\Source\\WindowFunctions\\arm_welch_f64.c"
-    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_adc_ex.c"
-    "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_adc.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_cortex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_dac_ex.c"
     "Drivers\\STM32L4xx_HAL_Driver\\Src\\stm32l4xx_hal_dac.c"

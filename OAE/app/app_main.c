@@ -1,6 +1,6 @@
 #include "main.h"
 #include "arm_math.h"
-#include "dual_dma.h"
+// #include "dual_dma.h"
 #define NS  128
 #define n_data 1000
 #define M_PI 3.14159265358979323846
@@ -15,7 +15,6 @@ extern TIM_HandleTypeDef htim2;
 
 //extern SAI_HandleTypeDef hsai_BlockA1;
 //extern DMA_HandleTypeDef hdma_sai1_a;
-
 //Runs once after all peripherals are initialized
 void app_setup(){
     uint32_t Wave_LUT[NS] = {
@@ -29,8 +28,12 @@ void app_setup(){
             234, 283, 336, 394, 456, 521, 591, 664, 740, 820, 902, 987, 1075, 1166, 1258,
             1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
     };
-    // HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
-    HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
+    // for (int i = 0; i < NS; i++) {
+    //     //for dual right alignment (page 624 of reference manual)
+    //     Wave_LUT[i] = Wave_LUT[i] << 16 | Wave_LUT[i];
+    // }
+    HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
+    // HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
     HAL_TIM_Base_Start(&htim2);
 //    float32_t FFT_Input_Q15_f[50];
 //    float32_t aFFT_Input_Q15[50];
@@ -42,36 +45,37 @@ void app_setup(){
 //        Wave_Data[i * 2] = (int16_t) (sin(2. * M_PI * 8. * i / 1000.) * 500);
 //        Wave_Data[i * 2 + 1] = (int16_t) (sin(2. * M_PI * 10. * i / 1000.) * 500);
 //    };
-//	HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint16_t*) Wave_Data, (uint16_t) n_data * 2);
+//HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint16_t*) Wave_Data, (uint16_t) n_data * 2);
 }
 
 //Runs repeatedly after app_setup() has finished
 void app_loop() {
-    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(100);
-
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-    HAL_Delay(100);
+     HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+     HAL_Delay(100);
+     HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+     HAL_Delay(100);
+     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+     HAL_Delay(100);
+     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+     HAL_Delay(100);
+     HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+     HAL_Delay(100);
+     HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+     HAL_Delay(100);
+    //  CDC_Transmit_FS(data, strlen(data));
+     HAL_Delay (1000);
+    // HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    // HAL_Delay(100);
+    // HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    // HAL_Delay(100);
+    // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    // HAL_Delay(100);
+    // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    // HAL_Delay(100);
+    // HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    // HAL_Delay(100);
+    // HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    // HAL_Delay(100);
 }
 
 
