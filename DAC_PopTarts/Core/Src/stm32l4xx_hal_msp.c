@@ -98,9 +98,8 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**DAC1 GPIO Configuration
     PA4     ------> DAC1_OUT1
-    PA5     ------> DAC1_OUT2
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -148,9 +147,8 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* hdac)
 
     /**DAC1 GPIO Configuration
     PA4     ------> DAC1_OUT1
-    PA5     ------> DAC1_OUT2
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_4|GPIO_PIN_5);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_4);
 
     /* DAC1 DMA DeInit */
     HAL_DMA_DeInit(hdac->DMA_Handle1);
@@ -176,9 +174,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE END TIM2_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM2_CLK_ENABLE();
-    /* TIM2 interrupt Init */
-    HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(TIM2_IRQn);
   /* USER CODE BEGIN TIM2_MspInit 1 */
 
   /* USER CODE END TIM2_MspInit 1 */
@@ -201,113 +196,11 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE END TIM2_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM2_CLK_DISABLE();
-
-    /* TIM2 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(TIM2_IRQn);
   /* USER CODE BEGIN TIM2_MspDeInit 1 */
 
   /* USER CODE END TIM2_MspDeInit 1 */
   }
 
-}
-
-extern DMA_HandleTypeDef hdma_sai2_a;
-
-static uint32_t SAI2_client =0;
-
-void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-/* SAI2 */
-    if(hsai->Instance==SAI2_Block_A)
-    {
-    /* Peripheral clock enable */
-
-  /** Initializes the peripherals clock
-  */
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_SAI2;
-    PeriphClkInit.Sai2ClockSelection = RCC_SAI2CLKSOURCE_PLLSAI2;
-    PeriphClkInit.PLLSAI2.PLLSAI2Source = RCC_PLLSOURCE_HSI;
-    PeriphClkInit.PLLSAI2.PLLSAI2M = 1;
-    PeriphClkInit.PLLSAI2.PLLSAI2N = 21;
-    PeriphClkInit.PLLSAI2.PLLSAI2P = RCC_PLLP_DIV7;
-    PeriphClkInit.PLLSAI2.PLLSAI2R = RCC_PLLR_DIV2;
-    PeriphClkInit.PLLSAI2.PLLSAI2ClockOut = RCC_PLLSAI2_SAI2CLK;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    if (SAI2_client == 0)
-    {
-       __HAL_RCC_SAI2_CLK_ENABLE();
-    }
-    SAI2_client ++;
-
-    /**SAI2_A_Block_A GPIO Configuration
-    PB12     ------> SAI2_FS_A
-    PB13     ------> SAI2_SCK_A
-    PB14     ------> SAI2_MCLK_A
-    PB15     ------> SAI2_SD_A
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF13_SAI2;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-      /* Peripheral DMA init*/
-
-    hdma_sai2_a.Instance = DMA2_Channel3;
-    hdma_sai2_a.Init.Request = DMA_REQUEST_1;
-    hdma_sai2_a.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_sai2_a.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_sai2_a.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_sai2_a.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_sai2_a.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_sai2_a.Init.Mode = DMA_CIRCULAR;
-    hdma_sai2_a.Init.Priority = DMA_PRIORITY_HIGH;
-    if (HAL_DMA_Init(&hdma_sai2_a) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* Several peripheral DMA handle pointers point to the same DMA handle.
-     Be aware that there is only one channel to perform all the requested DMAs. */
-    __HAL_LINKDMA(hsai,hdmarx,hdma_sai2_a);
-
-    __HAL_LINKDMA(hsai,hdmatx,hdma_sai2_a);
-
-    }
-}
-
-void HAL_SAI_MspDeInit(SAI_HandleTypeDef* hsai)
-{
-/* SAI2 */
-    if(hsai->Instance==SAI2_Block_A)
-    {
-    SAI2_client --;
-    if (SAI2_client == 0)
-      {
-      /* Peripheral clock disable */
-       __HAL_RCC_SAI2_CLK_DISABLE();
-      }
-
-    /**SAI2_A_Block_A GPIO Configuration
-    PB12     ------> SAI2_FS_A
-    PB13     ------> SAI2_SCK_A
-    PB14     ------> SAI2_MCLK_A
-    PB15     ------> SAI2_SD_A
-    */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15);
-
-    /* SAI2 DMA Deinit */
-    HAL_DMA_DeInit(hsai->hdmarx);
-    HAL_DMA_DeInit(hsai->hdmatx);
-    }
 }
 
 /* USER CODE BEGIN 1 */
