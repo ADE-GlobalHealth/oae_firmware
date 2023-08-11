@@ -99,6 +99,8 @@ For debugging, VS Code will normally start with the assembly file. However, you 
 ## Creating a new code source folder (for adding features)
 Inside the main project folder (ex. NUCLEO_L432KC), add a subfolder with the project name. Make sure to exclude other feature subfolders (**not** any of the default, like Drivers, Core, Debug, etc.) that include c source by right clicking, selecting "Resource Configurations", then "Exclude from Build."
 
-Right click on the main project folder, go to "Properties", then from there go to "C/C++ General", then "Paths and Symbols". There is a include_path_template.xml file that you can import in the "includes" tab and with "import settings" to restore it to the default configuration. If your feature subfolder has includes, make sure to add it to the includes table. 
+Right click on the main project folder, go to "Properties", then from there go to "C/C++ General", then "Paths and Symbols". There is a include_path_template.xml file that you can import in the "includes" tab and with "import settings" to restore it to the default configuration. Do this for both debug and release. If your feature subfolder has includes, make sure to add it to the includes table. 
 
 Go to the "Source Location" tab and "Add folder", then select your feature subfolder.
+
+If the CMSIS-DSP folder breaks for any reason, right click in drivers and add a linked folder to the following location: ${PARENT-1-PROJECT_LOC}\common\CMSIS-DSP.
