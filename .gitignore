@@ -18,11 +18,6 @@ local.properties
 # PyDev specific (Python IDE for Eclipse)
 *.pydevproject
 
-# CDT-specific (C/C++ Development Tooling)
-
-# CDT- autotools
-.autotools
-
 # Code Recommenders
 .recommenders/
 
@@ -34,8 +29,8 @@ local.properties
 # Spring Boot Tooling
 
 .sts4-cache/
-LED_NucleoFlash/.settings/language.settings.xml
-LED_NucleoFlash/.settings/stm32cubeide.project.prefs
+.settings/language.settings.xml
+.settings/stm32cubeide.project.prefs
 
 CMakeLists.txt.user
 CMakeCache.txt
@@ -53,10 +48,19 @@ _deps
 
 .cmake
 
+# Generated Code
+Debug
+Release
 build/
 
-Debug/
-
-*.launch
-
-LED_NucleoFlash/cmake/st-project.cmake
+# VS Code Generated files
+*/CMakeLists.txt
+*/CMakePresets.json
+*/vcpkg-configuration.json
+*/.vs/launch.vs.json
+*/.vscode/extensions.json
+*/.vscode/launch.json
+*/.vscode/settings.json
+*/.vscode/tasks.json
+*/cmake/gcc-arm-none-eabi.cmake
+*/cmake/st-project.cmake
