@@ -29,6 +29,8 @@ For easier debugging, install [Embedded Tools](https://marketplace.visualstudio.
 
 Open the STM32 sidebar, then click import local project and select LED_NucleoFlash/.cproject.
 
+*If vcpkg fails to load* Go to C:\Users\{username}\AppData\Roaming\Code\User\globalStorage\ms-vscode.vscode-embedded-tools\vcpkg\root and unzip the vcpkg-standalone-bundle.tar.gz file in that directory until there is a scripts directory in the root directory.
+
 Copy the [tasks.json file in this directory](tasks.json) to {PROJ}/.vscode/tasks.json.
 
 After everything has finished downloading, restart VS Code.
