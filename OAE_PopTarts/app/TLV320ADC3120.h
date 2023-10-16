@@ -13,6 +13,7 @@
 #define INC_TLV320ADC3120_H
 
 #include <stm32l4xx_hal.h>
+#include "app_lib.h"
 
 /* Initialize I2C Address and frame shift 1 bit to the left */
 #define TLV320ADC3120_I2C_ADDR     (0x4C << 1)
