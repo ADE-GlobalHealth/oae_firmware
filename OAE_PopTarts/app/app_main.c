@@ -7,6 +7,7 @@
 
 #include <app_core.h>
 #include <main.h>
+#include "TLV320ADC3120.h"
 
 #include "dual_dma.h"
 
@@ -15,11 +16,11 @@
 #define M_PI 3.14159265358979323846
 #include <stdbool.h>
 
-int16_t Wave_Data[n_data * 2];    // n_data is defined as 1000
-uint8_t Wave_buf_empty = 1;
 extern DAC_HandleTypeDef hdac1;
 extern DMA_HandleTypeDef hdma_dac_ch1;
 extern TIM_HandleTypeDef htim6;
+extern SAI_HandleTypeDef hsai_BlockA2;
+extern I2C_HandleTypeDef hi2c3;
 
 uint32_t Wave_LUT[NS] = {
 	                2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
@@ -33,6 +34,11 @@ uint32_t Wave_LUT[NS] = {
 	                1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
 	        };
 
+
+volatile uint8_t data_i2s[128];
+volatile int16_t i2s_sample;
+TLV320ADC3120 dev;
+
 void app_setup(){
 	for (int i = 0; i < NS; i++) {
 			  //for dual right alignment (page 624 of reference manual)
@@ -40,7 +46,11 @@ void app_setup(){
 	}
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim6);
+	TLV320ADC3120_Initialize(&dev, &hi2c3);
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
 }
+
+
 uint32_t time = 0;
 uint32_t blink_time = 0;
 // bool CheckButtonState(GPIO_TypeDef* port,GPIO_TypeDef* pin, unsigned long time);
@@ -58,80 +68,47 @@ void app_loop(){
 }
 
 
-// #define BUFFER_SIZE 128
-// int16_t adcData[BUFFER_SIZE];
-// int16_t dacData[BUFFER_SIZE];
-// static volatile int16_t *inputBufferPtr;
-// static volatile int16_t *outputBufferPtr = &dacData[0];
+#define BUFFER_SIZE 128
+int16_t adcData[BUFFER_SIZE];
+int16_t dacData[BUFFER_SIZE];
+static volatile int16_t *inputBufferPtr;
+static volatile int16_t *outputBufferPtr = &dacData[0];
 
-// uint8_t dataReadyFlag;
+uint8_t dataReadyFlag;
 
-// void HAL_I2S_DR_Half_Callback(SAI_HandleTypeDef *hi2s){
-// 	inputBufferPtr = &adcData[0];
-// 	outputBufferPtr = &dacData[0];
+void HAL_I2S_DR_Half_Callback(SAI_HandleTypeDef *hi2s){
+	inputBufferPtr = &adcData[0];
+	outputBufferPtr = &dacData[0];
 
-// 	dataReadyFlag = 1;
-// }
+	dataReadyFlag = 1;
+}
 
-// void HAL_I2S_DR_Full_Callback(SAI_HandleTypeDef *hi2s){
-// 	inputBufferPtr = &adcData[BUFFER_SIZE/2];
-// 	outputBufferPtr = &dacData[BUFFER_SIZE/2];
+void HAL_I2S_DR_Full_Callback(SAI_HandleTypeDef *hi2s){
+	inputBufferPtr = &adcData[BUFFER_SIZE/2];
+	outputBufferPtr = &dacData[BUFFER_SIZE/2];
 
-// 	dataReadyFlag = 1;
-// }
+	dataReadyFlag = 1;
+}
 
-// void processData(){
-// 	static float leftIn, leftOut;
-// 	static float rightIn, rightOut;
+#define INT16_TO_FLOAT 1.0f/32768.0f
+#define FLOAT_TO_INT16 32768.0f
 
-// 	for (uint8_t n = 0; n < (BUFFER_SIZE/2) - 1 ; n+= 2){
-// 		leftIn = INT16_TO_FLOAT * inputBufferPtr[n];
-// 		if (leftIn > 1.0f){
-// 			leftIn -= 2.0f;
-// 		}
+void processData(){
+	static float leftIn, leftOut;
+	static float rightIn, rightOut;
+	for (uint8_t n = 0; n < (BUFFER_SIZE/2) - 1 ; n+= 2){
+		leftIn = INT16_TO_FLOAT * inputBufferPtr[n];
+		if (leftIn > 1.0f){
+			leftIn -= 2.0f;
+		}
 
-// 		leftOut = leftIn;
-
-// 		outputBufferPtr[n] = (int16_t) (FLOAT_TO_INT16 * leftOut);
-
-// 		rightIn = INT16_TO_FLOAT * inputBufferPtr[n + 1];
-// 		if (rightIn > 1.0f){
-// 			rightIn -= 2.0f;
-// 		}
-
-// 		outputBufferPtr[n + 1] = (int16_t) (FLOAT_TO_INT16 * rightOut);
-
-// 	}
-
-// 	dataReadyFlag = 0;
-// }
-
-
-// void driver_setup(){
-// 	TLV320ADC3120 dev;
-//   	TLV320ADC3120_Initialize(&dev, &hi2c3);
-// }
-
-// void driver_loop(){
-//      HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-//      HAL_Delay(2000);
-//      HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-//      HAL_Delay(1000);
-//      HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-//      HAL_Delay(2000);
-//      HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-//      HAL_Delay(1000);
-//      HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-//      HAL_Delay(2000);
-//      HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-//      HAL_Delay(1000);
-// }
-
-// // in main.c init
-// int16_t data_i2s[100];
-// volatile int16_t i2s_sample;
-// TLV320ADC3120 dev;
-// TLV320ADC3120_Initialize(&dev, &hi2c3);
-// HAL_SAI_Receive_DMA(&hsai_BlockA2, (uint8_t *)data_i2s , sizeof(data_i2s)/2);
-
-// // app_loop = driver_loop
+		leftOut = leftIn;
+		outputBufferPtr[n] = (int16_t) (FLOAT_TO_INT16 * leftOut);
+		rightIn = INT16_TO_FLOAT * inputBufferPtr[n + 1];
+		if (rightIn > 1.0f){
+			rightIn -= 2.0f;
+		}
+		outputBufferPtr[n + 1] = (int16_t) (FLOAT_TO_INT16 * rightOut);
+	}
+	dataReadyFlag = 0;
+}
