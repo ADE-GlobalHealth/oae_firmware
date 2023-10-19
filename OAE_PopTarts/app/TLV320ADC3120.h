@@ -16,7 +16,7 @@
 #include "app_lib.h"
 
 /* Initialize I2C Address and frame shift 1 bit to the left */
-#define TLV320ADC3120_I2C_ADDR     (0x4C << 1)
+#define TLV320ADC3120_I2C_ADDR     0x9C
 
 /* Define essential registers to be used */
 #define TLV320ADC3120_ASI_CONFIG    0x07

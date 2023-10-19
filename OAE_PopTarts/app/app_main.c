@@ -36,8 +36,51 @@ uint32_t Wave_LUT[NS] = {
 
 
 volatile uint8_t data_i2s[128];
-volatile int16_t i2s_sample;
 TLV320ADC3120 dev;
+void w(uint16_t devaddr, uint_t memaddr, uint8_t data){
+	// Device address is 1001110, left shifted by 1 is 9C
+	uint8_t* pData = &data;
+	HAL_I2C_Mem_Write(&hi2c3, devaddr, memaddr, 1,pData, 1, HAL_MAX_DELAY);
+}
+#include "tlv320adcx120_page0.h"
+
+void init_adc(){
+	// # Key: w 9C XX YY ==> write to I2C address 0x9C, to register 0xXX, data 0xYY
+
+	// Wait for 1 ms.
+	HAL_Delay(1);
+
+	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
+	w(0x9C,0x02,0x81);
+
+	HAL_Delay(10);
+	
+// // Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
+// 	w(0x9C,0x73,0xC0);
+	
+	
+	//
+
+	//! Write prefered format as I2S into P0_R7
+	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S & ASI_CFG0_WLEN_32_BITS);
+
+	//! Set single ended input for channel 1
+	w(0x9C,0x3C,CH1_CFG0_INSRC_SINGLE);
+
+	//! Set single ended input for channel 2
+	w(0x9C,0x41,CH2_CFG0_INSRC_SINGLE);
+
+}
+
+
+// 	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+// 	w(0x9C,0x74,0xC0);
+
+// 	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
+// 	w(0x9C,0x75,0xE0);
+
+
+
 
 void app_setup(){
 	for (int i = 0; i < NS; i++) {
@@ -47,7 +90,9 @@ void app_setup(){
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim6);
 	TLV320ADC3120_Initialize(&dev, &hi2c3);
-	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
+	// HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 }
 
 
@@ -72,7 +117,7 @@ void app_loop(){
 int16_t adcData[BUFFER_SIZE];
 int16_t dacData[BUFFER_SIZE];
 static volatile int16_t *inputBufferPtr;
-static volatile int16_t *outputBufferPtr = &dacData[0];
+static volatile int16_t *outputBufferPtr = &dacData;
 
 uint8_t dataReadyFlag;
 
