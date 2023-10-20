@@ -7,7 +7,7 @@
 
 #include <app_core.h>
 #include <main.h>
-#include "TLV320ADC3120.h"
+// #include "TLV320ADC3120.h"
 
 #include "dual_dma.h"
 
@@ -36,48 +36,89 @@ uint32_t Wave_LUT[NS] = {
 
 
 volatile uint8_t data_i2s[128];
-TLV320ADC3120 dev;
-void w(uint16_t devaddr, uint_t memaddr, uint8_t data){
+// TLV320ADC3120 dev;
+void w(uint16_t devaddr, uint16_t memaddr, uint8_t data){
+	uint8_t data1 = data;
 	// Device address is 1001110, left shifted by 1 is 9C
-	uint8_t* pData = &data;
+	uint8_t* pData = &data1;
 	HAL_I2C_Mem_Write(&hi2c3, devaddr, memaddr, 1,pData, 1, HAL_MAX_DELAY);
 }
+
 #include "tlv320adcx120_page0.h"
 
 void init_adc(){
-	// # Key: w 9C XX YY ==> write to I2C address 0x9C, to register 0xXX, data 0xYY
+	// Step 1: apply power to the device
 
 	// Wait for 1 ms.
 	HAL_Delay(1);
 
-	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
-	w(0x9C,0x02,0x81);
+	// Step 2a: wake up the device
 
+	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
+	w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
+
+	// Step 2b: wait for the device to wake up
 	HAL_Delay(10);
 	
-// // Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
-// 	w(0x9C,0x73,0xC0);
-	
-	
-	//
+	// // Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
+	// 	w(0x9C,0x73,0xC0);
+	//Set micbias to be GP2
+	// w(0x9C, 0x3B, BIAS_CFG_MBIAS_VAL_GPI2)
+	// Set GPI2 to be MCLK input
+	// w(0x9C, 0x2B, GPI_CFG0_GPI2_CFG_MCLK)
+
+	// Step 2c. Overwrite default configuration registers or programmable coefficient values as required
+
+	//Set Master Clock for PLL and make this master
+	w(0x9C,0x13,MST_CFG0_MST_SLV_CFG_MASTER & MST_CFG0_MCLK_FREQ_SEL_12_MHZ);
+
+	//Set I2S sample rate to 8kHz
+	w(0x9C,0x14,MST_CFG1_FS_RATE_7P35_8_KHZ & MST_CFG1_FS_BCLK_RATIO_32);
 
 	//! Write prefered format as I2S into P0_R7
 	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S & ASI_CFG0_WLEN_32_BITS);
 
+	
 	//! Set single ended input for channel 1
 	w(0x9C,0x3C,CH1_CFG0_INSRC_SINGLE);
 
 	//! Set single ended input for channel 2
 	w(0x9C,0x41,CH2_CFG0_INSRC_SINGLE);
 
+	//! Set channel summation mode
+	w(0x9C,0x6B,DSP_CFG0_CH_SUM_2CH);
+
+	//! Set GPIO1 to be an interupt output
+	w(0x9C,0x21,GPIO_CFG0_GPIO1_CFG_IRQ);
+
+	//Step 2d. Enable all desired input channels
+	//Enable channel 1 and 2 - enabled by default
+	// w(0x9C,0x73,IN_CH_EN_CH1_ENABLED & IN_CH_EN_CH2_ENABLED);
+	
+	//Step 2e. Enable all desired serial audio output channels
+
+	// 	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+	w(0x9C,0x74,ASI_OUT_CH_EN_CH1_ENABLED & ASI_OUT_CH_EN_CH2_ENABLED);
+
+	//Step 2f. Power up the ADC, MICBIAS and PLL
+	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
+	w(0x9C,0x75,PWR_CFG_ADC_PDZ_ON & PWR_CFG_MICBIAS_PDZ_OFF & PWR_CFG_PLL_PDZ_ON);
+
+
 }
 
 
-// 	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
-// 	w(0x9C,0x74,0xC0);
 
-// 	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
-// 	w(0x9C,0x75,0xE0);
+void end_adc(){
+	// Enter sleep mode by writing to P0_R2
+	w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_SLEEP);
+	// Wait at least 6ms
+	HAL_Delay(6);
+	// Read P0_R119 to check device shutdown and sleep mode status
+	uint8_t status = 0;
+	HAL_I2C_Mem_Read(&hi2c3, 0x9C, 0x77, 1, &status, 1, HAL_MAX_DELAY);
+	if (status != DEV_STS1_MODE_STS_SLEEP) HAL_Delay(1000);
+}
 
 
 
@@ -89,9 +130,10 @@ void app_setup(){
 	}
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim6);
-	TLV320ADC3120_Initialize(&dev, &hi2c3);
+	init_adc();
+	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
-	// HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
 	status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 }
 
@@ -99,61 +141,68 @@ void app_setup(){
 uint32_t time = 0;
 uint32_t blink_time = 0;
 // bool CheckButtonState(GPIO_TypeDef* port,GPIO_TypeDef* pin, unsigned long time);
+uint8_t counter = 0;
+bool endflag = false;
 void app_loop(){
 	// DO not use HAL_Delay -> generates an interrupt that halts DMA channels
     time = HAL_GetTick();
     if ((time - blink_time) > 500) {
+		w(0x9A,0x02,0x00);
         HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
         HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
         blink_time = time;
+		counter++;
     }
+	if (counter == 200 && endflag == false){
+		// end_adc();
+		endflag = true;
+	}
     // if (CheckButtonState(SW1_GPIO_Port,SW1_Pin,time)){
     // 	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
     // }
 }
 
 
-#define BUFFER_SIZE 128
-int16_t adcData[BUFFER_SIZE];
-int16_t dacData[BUFFER_SIZE];
-static volatile int16_t *inputBufferPtr;
-static volatile int16_t *outputBufferPtr = &dacData;
+// #define BUFFER_SIZE 128
+// int16_t adcData[BUFFER_SIZE];
+// int16_t dacData[BUFFER_SIZE];
+// static volatile int16_t *inputBufferPtr;
+// static volatile int16_t *outputBufferPtr = &dacData;
 
-uint8_t dataReadyFlag;
+// uint8_t dataReadyFlag;
 
-void HAL_I2S_DR_Half_Callback(SAI_HandleTypeDef *hi2s){
-	inputBufferPtr = &adcData[0];
-	outputBufferPtr = &dacData[0];
+// void HAL_I2S_DR_Half_Callback(SAI_HandleTypeDef *hi2s){
+// 	inputBufferPtr = &adcData[0];
+// 	outputBufferPtr = &dacData[0];
 
-	dataReadyFlag = 1;
-}
+// 	dataReadyFlag = 1;
+// }
 
-void HAL_I2S_DR_Full_Callback(SAI_HandleTypeDef *hi2s){
-	inputBufferPtr = &adcData[BUFFER_SIZE/2];
-	outputBufferPtr = &dacData[BUFFER_SIZE/2];
+// void HAL_I2S_DR_Full_Callback(SAI_HandleTypeDef *hi2s){
+// 	inputBufferPtr = &adcData[BUFFER_SIZE/2];
+// 	outputBufferPtr = &dacData[BUFFER_SIZE/2];
+// 	dataReadyFlag = 1;
+// }
 
-	dataReadyFlag = 1;
-}
+// #define INT16_TO_FLOAT 1.0f/32768.0f
+// #define FLOAT_TO_INT16 32768.0f
 
-#define INT16_TO_FLOAT 1.0f/32768.0f
-#define FLOAT_TO_INT16 32768.0f
+// void processData(){
+// 	static float leftIn, leftOut;
+// 	static float rightIn, rightOut;
+// 	for (uint8_t n = 0; n < (BUFFER_SIZE/2) - 1 ; n+= 2){
+// 		leftIn = INT16_TO_FLOAT * inputBufferPtr[n];
+// 		if (leftIn > 1.0f){
+// 			leftIn -= 2.0f;
+// 		}
 
-void processData(){
-	static float leftIn, leftOut;
-	static float rightIn, rightOut;
-	for (uint8_t n = 0; n < (BUFFER_SIZE/2) - 1 ; n+= 2){
-		leftIn = INT16_TO_FLOAT * inputBufferPtr[n];
-		if (leftIn > 1.0f){
-			leftIn -= 2.0f;
-		}
-
-		leftOut = leftIn;
-		outputBufferPtr[n] = (int16_t) (FLOAT_TO_INT16 * leftOut);
-		rightIn = INT16_TO_FLOAT * inputBufferPtr[n + 1];
-		if (rightIn > 1.0f){
-			rightIn -= 2.0f;
-		}
-		outputBufferPtr[n + 1] = (int16_t) (FLOAT_TO_INT16 * rightOut);
-	}
-	dataReadyFlag = 0;
-}
+// 		leftOut = leftIn;
+// 		outputBufferPtr[n] = (int16_t) (FLOAT_TO_INT16 * leftOut);
+// 		rightIn = INT16_TO_FLOAT * inputBufferPtr[n + 1];
+// 		if (rightIn > 1.0f){
+// 			rightIn -= 2.0f;
+// 		}
+// 		outputBufferPtr[n + 1] = (int16_t) (FLOAT_TO_INT16 * rightOut);
+// 	}
+// 	dataReadyFlag = 0;
+// }
