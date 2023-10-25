@@ -37,48 +37,67 @@ uint32_t Wave_LUT[NS] = {
 
 volatile uint8_t data_i2s[128];
 // TLV320ADC3120 dev;
-void w(uint16_t devaddr, uint16_t memaddr, uint8_t data){
-	uint8_t data1 = data;
+
+
+uint8_t data1 = 0x01;
+uint8_t* pData = &data1;
+
+void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2){
+	data1 = data2;
 	// Device address is 1001110, left shifted by 1 is 9C
-	uint8_t* pData = &data1;
+	pData = &data1;
 	HAL_I2C_Mem_Write(&hi2c3, devaddr, memaddr, 1,pData, 1, HAL_MAX_DELAY);
 }
+
 
 #include "tlv320adcx120_page0.h"
 
 void init_adc(){
 	// Step 1: apply power to the device
 
+	// // Wait for 1 ms.
+	// HAL_Delay(10000);
+
+	// // Step 2a: wake up the device
+
+	// // Wake-up the device with an I2C write into P0_R2 using an internal AREG
+	// w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
+
+	// w(0x9C,0x01,SW_RESET_RESET);
+	// // Step 2b: wait for the device to wake up
+	// HAL_Delay(100);
 	// Wait for 1 ms.
-	HAL_Delay(1);
+	HAL_Delay(10000);
 
 	// Step 2a: wake up the device
 
 	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
-	w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
+	w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL | SLEEP_CFG_SLEEP_ENZ_ACTIVE);
 
-	// Step 2b: wait for the device to wake up
 	HAL_Delay(10);
-	
+
 	// // Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
-	// 	w(0x9C,0x73,0xC0);
-	//Set micbias to be GP2
-	// w(0x9C, 0x3B, BIAS_CFG_MBIAS_VAL_GPI2)
-	// Set GPI2 to be MCLK input
-	// w(0x9C, 0x2B, GPI_CFG0_GPI2_CFG_MCLK)
+	w(0x9C,0x73,0xC0);
+
+	//!Set micbias to be GP2
+	 w(0x9C, 0x3B, BIAS_CFG_MBIAS_VAL_GPI2);
+	// !Set GPI2 to be MCLK input
+	 w(0x9C, 0x2B, GPI_CFG0_GPI2_CFG_MCLK);
 
 	// Step 2c. Overwrite default configuration registers or programmable coefficient values as required
 
-	//Set Master Clock for PLL and make this master
-	w(0x9C,0x13,MST_CFG0_MST_SLV_CFG_MASTER & MST_CFG0_MCLK_FREQ_SEL_12_MHZ);
+	//!Set Master Clock for PLL and make this slave
+	w(0x9C,0x13,MST_CFG0_MST_SLV_CFG_SLAVE | MST_CFG0_AUTO_CLK_CFG_ENABLED);
 
 	//Set I2S sample rate to 8kHz
-	w(0x9C,0x14,MST_CFG1_FS_RATE_7P35_8_KHZ & MST_CFG1_FS_BCLK_RATIO_32);
+	// w(0x9C,0x14,MST_CFG1_FS_RATE_7P35_8_KHZ & MST_CFG1_FS_BCLK_RATIO_32); - master mode only
 
 	//! Write prefered format as I2S into P0_R7
-	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S & ASI_CFG0_WLEN_32_BITS);
+	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
 
-	
+	//! Set clock source to BLK
+	// w(0x9C,0x16,CLK_SRC_DIS_PLL_SLV_CLK_SRC_BCLK);
+
 	//! Set single ended input for channel 1
 	w(0x9C,0x3C,CH1_CFG0_INSRC_SINGLE);
 
@@ -86,28 +105,47 @@ void init_adc(){
 	w(0x9C,0x41,CH2_CFG0_INSRC_SINGLE);
 
 	//! Set channel summation mode
-	w(0x9C,0x6B,DSP_CFG0_CH_SUM_2CH);
+	// w(0x9C,0x6B,DSP_CFG0_CH_SUM_2CH);
 
 	//! Set GPIO1 to be an interupt output
-	w(0x9C,0x21,GPIO_CFG0_GPIO1_CFG_IRQ);
+	// w(0x9C,0x21,GPIO_CFG0_GPIO1_CFG_IRQ);
+
+	//! Set interupt to active high
+	// w(0x9C,0x32,INT_CFG_INT_POL_HIGH);
+
+	//! Set interupt masks to allow clock errors
+	// w(0x9C,0x33,INT_MASK0_DEFAULT | INT_MASK0_ASI_CLK_ERR_UNMASKED);
 
 	//Step 2d. Enable all desired input channels
 	//Enable channel 1 and 2 - enabled by default
-	// w(0x9C,0x73,IN_CH_EN_CH1_ENABLED & IN_CH_EN_CH2_ENABLED);
+	w(0x9C,0x73,IN_CH_EN_CH1_ENABLED | IN_CH_EN_CH2_ENABLED);
 	
 	//Step 2e. Enable all desired serial audio output channels
 
-	// 	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
-	w(0x9C,0x74,ASI_OUT_CH_EN_CH1_ENABLED & ASI_OUT_CH_EN_CH2_ENABLED);
+	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+	w(0x9C,0x74,ASI_OUT_CH_EN_CH1_ENABLED | ASI_OUT_CH_EN_CH2_ENABLED);
 
 	//Step 2f. Power up the ADC, MICBIAS and PLL
 	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
-	w(0x9C,0x75,PWR_CFG_ADC_PDZ_ON & PWR_CFG_MICBIAS_PDZ_OFF & PWR_CFG_PLL_PDZ_ON);
+	w(0x9C,0x75,PWR_CFG_ADC_PDZ_ON | PWR_CFG_PLL_PDZ_ON | PWR_CFG_MICBIAS_PDZ_OFF);
 
 
 }
 
+void init_adc_2(){
+	HAL_Delay(1000);
+	w(0x9C,0x02, 0x81);
+	HAL_Delay(10);
+	//Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
+	w(0x9C,0x73,0xC0);
 
+	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S & ASI_CFG0_WLEN_16_BITS);
+	//Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+	w(0x9C,0x74,0xC0);
+
+	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
+	w(0x9C,0x75,0xE0);
+}
 
 void end_adc(){
 	// Enter sleep mode by writing to P0_R2
@@ -144,14 +182,15 @@ uint32_t blink_time = 0;
 uint8_t counter = 0;
 bool endflag = false;
 void app_loop(){
+//	w(0x12,0x02,0x00);
 	// DO not use HAL_Delay -> generates an interrupt that halts DMA channels
     time = HAL_GetTick();
     if ((time - blink_time) > 500) {
-		w(0x9A,0x02,0x00);
         HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
         HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
         blink_time = time;
 		counter++;
+		//w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
     }
 	if (counter == 200 && endflag == false){
 		// end_adc();
