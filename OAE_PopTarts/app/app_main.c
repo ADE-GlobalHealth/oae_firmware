@@ -67,7 +67,7 @@ void init_adc(){
 	// // Step 2b: wait for the device to wake up
 	// HAL_Delay(100);
 	// Wait for 1 ms.
-	HAL_Delay(10000);
+	HAL_Delay(1000);
 
 	// Step 2a: wake up the device
 
@@ -87,43 +87,43 @@ void init_adc(){
 	// Step 2c. Overwrite default configuration registers or programmable coefficient values as required
 
 	//!Set Master Clock for PLL and make this slave
-	w(0x9C,0x13,MST_CFG0_MST_SLV_CFG_SLAVE | MST_CFG0_AUTO_CLK_CFG_ENABLED);
+	//w(0x9C,0x13,MST_CFG0_MST_SLV_CFG_SLAVE | MST_CFG0_AUTO_CLK_CFG_ENABLED); - only defaults
 
 	//Set I2S sample rate to 8kHz
 	// w(0x9C,0x14,MST_CFG1_FS_RATE_7P35_8_KHZ & MST_CFG1_FS_BCLK_RATIO_32); - master mode only
 
 	//! Write prefered format as I2S into P0_R7
-	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
+	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_32_BITS);
 
 	//! Set clock source to BLK
-	// w(0x9C,0x16,CLK_SRC_DIS_PLL_SLV_CLK_SRC_BCLK);
+	w(0x9C,0x16,CLK_SRC_DIS_PLL_SLV_CLK_SRC_BCLK);
 
 	//! Set single ended input for channel 1
 	w(0x9C,0x3C,CH1_CFG0_INSRC_SINGLE);
 
 	//! Set single ended input for channel 2
-	w(0x9C,0x41,CH2_CFG0_INSRC_SINGLE);
+	//w(0x9C,0x41,CH2_CFG0_INSRC_SINGLE);
 
 	//! Set channel summation mode
-	// w(0x9C,0x6B,DSP_CFG0_CH_SUM_2CH);
+	//w(0x9C,0x6B,DSP_CFG0_CH_SUM_2CH);
 
 	//! Set GPIO1 to be an interupt output
-	// w(0x9C,0x21,GPIO_CFG0_GPIO1_CFG_IRQ);
+	w(0x9C,0x21,GPIO_CFG0_GPIO1_CFG_IRQ);
 
 	//! Set interupt to active high
-	// w(0x9C,0x32,INT_CFG_INT_POL_HIGH);
+	w(0x9C,0x32,INT_CFG_INT_POL_HIGH);
 
 	//! Set interupt masks to allow clock errors
-	// w(0x9C,0x33,INT_MASK0_DEFAULT | INT_MASK0_ASI_CLK_ERR_UNMASKED);
+	w(0x9C,0x33,INT_MASK0_DEFAULT | INT_MASK0_ASI_CLK_ERR_UNMASKED);
 
 	//Step 2d. Enable all desired input channels
 	//Enable channel 1 and 2 - enabled by default
-	w(0x9C,0x73,IN_CH_EN_CH1_ENABLED | IN_CH_EN_CH2_ENABLED);
+	w(0x9C,0x73,IN_CH_EN_CH1_ENABLED | IN_CH_EN_CH2_DISABLED);
 	
 	//Step 2e. Enable all desired serial audio output channels
 
-	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
-	w(0x9C,0x74,ASI_OUT_CH_EN_CH1_ENABLED | ASI_OUT_CH_EN_CH2_ENABLED);
+	// Enable ASI output Ch-1 by an I2C write into P0_R116
+	w(0x9C,0x74,ASI_OUT_CH_EN_CH1_ENABLED);
 
 	//Step 2f. Power up the ADC, MICBIAS and PLL
 	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
@@ -139,7 +139,7 @@ void init_adc_2(){
 	//Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
 	w(0x9C,0x73,0xC0);
 
-	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S & ASI_CFG0_WLEN_16_BITS);
+	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
 	//Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
 	w(0x9C,0x74,0xC0);
 
@@ -149,7 +149,7 @@ void init_adc_2(){
 
 void end_adc(){
 	// Enter sleep mode by writing to P0_R2
-	w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_SLEEP);
+	w(0x9C,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL | SLEEP_CFG_SLEEP_ENZ_SLEEP);
 	// Wait at least 6ms
 	HAL_Delay(6);
 	// Read P0_R119 to check device shutdown and sleep mode status
@@ -168,7 +168,7 @@ void app_setup(){
 	}
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim6);
-	init_adc();
+	init_adc_2();
 	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));

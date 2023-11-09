@@ -310,8 +310,8 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
     PeriphClkInit.Sai2ClockSelection = RCC_SAI2CLKSOURCE_PLLSAI2;
     PeriphClkInit.PLLSAI2.PLLSAI2Source = RCC_PLLSOURCE_HSI;
     PeriphClkInit.PLLSAI2.PLLSAI2M = 1;
-    PeriphClkInit.PLLSAI2.PLLSAI2N = 11;
-    PeriphClkInit.PLLSAI2.PLLSAI2P = RCC_PLLP_DIV7;
+    PeriphClkInit.PLLSAI2.PLLSAI2N = 13;
+    PeriphClkInit.PLLSAI2.PLLSAI2P = RCC_PLLP_DIV17;
     PeriphClkInit.PLLSAI2.PLLSAI2R = RCC_PLLR_DIV2;
     PeriphClkInit.PLLSAI2.PLLSAI2ClockOut = RCC_PLLSAI2_SAI2CLK;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
