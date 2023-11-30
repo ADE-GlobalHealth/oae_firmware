@@ -8,7 +8,7 @@
 #include <app_core.h>
 #include <main.h>
 // #include "TLV320ADC3120.h"
-
+#include <arm_math.h>
 #include "dual_dma.h"
 
 #define NS  128
@@ -35,7 +35,8 @@ uint32_t Wave_LUT[NS] = {
 	        };
 
 
-volatile uint8_t data_i2s[128];
+volatile uint32_t data_i2s[128];
+volatile uint32_t data_i2s_2[128];
 // TLV320ADC3120 dev;
 
 
@@ -158,8 +159,32 @@ void end_adc(){
 	if (status != DEV_STS1_MODE_STS_SLEEP) HAL_Delay(1000);
 }
 
+arm_rfft_fast_instance_f32 S_;
+arm_rfft_fast_instance_f32* S = &S_;
 
+int fft_cycles = 10; //must be even to start with
 
+float32_t fft_output[10+1]; //would be length of fft_cycles +1 for inital 
+
+void fft(){
+	int* current_buffer = fft_cycles % 2 == 0 ? data_i2s : data_i2s_2;
+	int* next_buffer = fft_cycles % 2 == 0 ? data_i2s_2 : data_i2s;
+	for (int i = 0; i < n_data; i++){
+		current_buffer[i] = (float) current_buffer[i];
+	}
+	arm_rfft_fast_init_f32(S, 128);
+	arm_rfft_fast_f32(S,current_buffer, fft_output, 0);
+	// further analysis here & output
+	if (fft_cycles > 0)
+	{
+		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) next_buffer, sizeof(next_buffer));
+		fft_cycles--;
+	}
+}
+
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
+	fft();
+}
 
 void app_setup(){
 	for (int i = 0; i < NS; i++) {
@@ -172,8 +197,11 @@ void app_setup(){
 	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	
 	status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 }
+
+
 
 
 uint32_t time = 0;
