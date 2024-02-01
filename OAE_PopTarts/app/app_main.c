@@ -11,10 +11,13 @@
 #include <arm_math.h>
 #include "dual_dma.h"
 
-#define NS  128
+#define NS  4096
 #define n_data 1000
 #define M_PI 3.14159265358979323846
 #include <stdbool.h>
+
+#include <stm32l4xx_hal_sai.h>
+#include <stm32l4xx_hal_dac.h>
 
 extern DAC_HandleTypeDef hdac1;
 extern DMA_HandleTypeDef hdma_dac_ch1;
@@ -49,7 +52,6 @@ void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2){
 	pData = &data1;
 	HAL_I2C_Mem_Write(&hi2c3, devaddr, memaddr, 1,pData, 1, HAL_MAX_DELAY);
 }
-
 
 #include "tlv320adcx120_page0.h"
 
@@ -175,12 +177,25 @@ void fft(){
 	arm_rfft_fast_init_f32(S, 128);
 	arm_rfft_fast_f32(S,current_buffer, fft_output, 0);
 	// further analysis here & output
+	//median of noise bins
+	// if good
+		// mean of noise
+		// mean of dpoae
+	//sum noise and dpoae into total 
+	//counter of good vs bad -> if test bad
+	// keep dpoae total and log it
+	// divide noise and dpoae by total
+	// subtract noise from dpoae
+	// log to find snr
+
+
 	if (fft_cycles > 0)
 	{
 		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) next_buffer, sizeof(next_buffer));
 		fft_cycles--;
 	}
 }
+
 
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
 	fft();
