@@ -34,13 +34,13 @@
       "MIMode": "gdb",
       "miDebuggerPath": "${command:vscode-embedded.st.gdb}",
       "miDebuggerServerAddress": "localhost:3333",
-      "debugServerPath": "/opt/st/stm32cubeide_1.12.1/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.linux64_2.0.500.202301161003/tools/bin/ST-LINK_gdbserver",
+      "debugServerPath": "/opt/st/stm32cubeclt/STLink-gdb-server/bin/ST-LINK_gdbserver",
       "debugServerArgs": "--stm32cubeprogrammer-path ${command:vscode-embedded.st.cubeprogrammer} --swd --port-number 3333",
       "serverStarted": "Waiting for connection on port .*\\.\\.\\.",
       "stopAtConnect": true,
       "postRemoteConnectCommands": [
         {
-          "text": "load build/debug/build/LED_NucleoFlash.elf"
+          "text": "load build/debug/build/OAE_PopTarts.elf"
         }
       ],
       "logging": {
