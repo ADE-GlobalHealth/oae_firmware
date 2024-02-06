@@ -54,7 +54,6 @@ Release
 build/
 
 # VS Code Generated files
-*/CMakeLists.txt
 */CMakePresets.json
 */.vscode/extensions.json
 */.vscode/settings.json
