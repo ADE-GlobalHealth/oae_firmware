@@ -23,6 +23,8 @@ You may have to repeat the above two steps occasionally.
 
 In addition to STM32CubeIDE also install [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html), [STM32CubeCLT](https://www.st.com/en/development-tools/stm32cubeclt.html) and [STMCUFinder](https://www.st.com/en/development-tools/st-mcu-finder-pc.html).
 
+Add `/opt/ST/stm32cubeclt/STM32CubeProgrammer/bin/STM32_Programmer_CLT.exe` to your path if you are on Linux after installing STM32CubeCLT.
+
 Open VS Code and install [this](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) extension.
 
 For easier debugging, install [Embedded Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-embedded-tools), [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools), and [C/C++ Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)

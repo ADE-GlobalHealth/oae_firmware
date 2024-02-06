@@ -5,7 +5,11 @@ This repository contains the firmware needed for flashing our boards.
 
 We have tested our configurations using STM32CubeIDE v1.13.0.
 
-A full setup guide is available [here](docs/setup.md).
+A full setup guide is available [here](docs/setup.md) for setting up our toolchain.
+
+Software for the Analog Discovery can be found [here](https://digilent.com/reference/software/waveforms/waveforms-3/start).
+
+
 
 ## Naming
 
