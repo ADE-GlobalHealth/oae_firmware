@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch",
+      "name": "Launch - Windows",
       "type": "cppdbg",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -16,7 +16,7 @@
       "stopAtConnect": true,
       "postRemoteConnectCommands": [
         {
-          "text": "load build/debug/build/OAE_PopTarts.elf"
+          "text": "load build/debug/build/${workspaceFolderBasename}.elf"
         }
       ],
       "logging": {
@@ -26,7 +26,7 @@
       "svdPath": "${command:vscode-embedded.st.svd}/STM32L4x5.svd"
     },
     {
-      "name": "Launch - Linux with stm32cubeide 1.12.1",
+      "name": "Launch - Linux",
       "type": "cppdbg",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -40,7 +40,7 @@
       "stopAtConnect": true,
       "postRemoteConnectCommands": [
         {
-          "text": "load build/debug/build/OAE_PopTarts.elf"
+          "text": "load build/debug/build/${workspaceFolderBasename}.elf"
         }
       ],
       "logging": {
