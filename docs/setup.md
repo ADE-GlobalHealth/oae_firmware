@@ -23,11 +23,15 @@ You may have to repeat the above two steps occasionally.
 
 In addition to STM32CubeIDE also install [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html), [STM32CubeCLT](https://www.st.com/en/development-tools/stm32cubeclt.html) and [STMCUFinder](https://www.st.com/en/development-tools/st-mcu-finder-pc.html).
 
+Add `/opt/ST/stm32cubeclt/STM32CubeProgrammer/bin/STM32_Programmer_CLT.exe` to your path if you are on Linux after installing STM32CubeCLT.
+
 Open VS Code and install [this](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) extension.
 
 For easier debugging, install [Embedded Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-embedded-tools), [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools), and [C/C++ Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
 
 Open the STM32 sidebar, then click import local project and select LED_NucleoFlash/.cproject.
+
+*If vcpkg fails to load* Go to C:\Users\{username}\AppData\Roaming\Code\User\globalStorage\ms-vscode.vscode-embedded-tools\vcpkg\root and unzip the vcpkg-standalone-bundle.tar.gz file in that directory until there is a scripts directory in the root directory.
 
 Copy the [tasks.json file in this directory](tasks.json) to {PROJ}/.vscode/tasks.json.
 
@@ -99,6 +103,8 @@ For debugging, VS Code will normally start with the assembly file. However, you 
 ## Creating a new code source folder (for adding features)
 Inside the main project folder (ex. NUCLEO_L432KC), add a subfolder with the project name. Make sure to exclude other feature subfolders (**not** any of the default, like Drivers, Core, Debug, etc.) that include c source by right clicking, selecting "Resource Configurations", then "Exclude from Build."
 
-Right click on the main project folder, go to "Properties", then from there go to "C/C++ General", then "Paths and Symbols". There is a include_path_template.xml file that you can import in the "includes" tab and with "import settings" to restore it to the default configuration. If your feature subfolder has includes, make sure to add it to the includes table. 
+Right click on the main project folder, go to "Properties", then from there go to "C/C++ General", then "Paths and Symbols". There is a include_path_template.xml file that you can import in the "includes" tab and with "import settings" to restore it to the default configuration. Do this for both debug and release. If your feature subfolder has includes, make sure to add it to the includes table. 
 
 Go to the "Source Location" tab and "Add folder", then select your feature subfolder.
+
+If the CMSIS-DSP folder breaks for any reason, right click in drivers and add a linked folder to the following location: ${PARENT-1-PROJECT_LOC}\common\CMSIS-DSP.
