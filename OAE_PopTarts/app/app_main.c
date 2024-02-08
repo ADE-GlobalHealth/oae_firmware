@@ -8,7 +8,7 @@
 #include <app_core.h>
 #include <main.h>
 // #include "TLV320ADC3120.h"
-// #include <arm_math.h>
+#include <arm_math.h>
 #include "dual_dma.h"
 
 #define NS  4096
