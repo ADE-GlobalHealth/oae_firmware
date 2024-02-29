@@ -202,16 +202,16 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
 }
 
 void app_setup(){
-	// for (int i = 0; i < NS; i++) {
-	// 		  //for dual right alignment (page 624 of reference manual)
-	// 		  Wave_LUT[i] = (Wave_LUT[i] << 16) | (Wave_LUT[i] >> 2);
-	// }
-	// HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
-	// HAL_TIM_Base_Start(&htim6);
-	// init_adc_2();
-	// // TLV320ADC3120_Initialize(&dev, &hi2c3);
+	for (int i = 0; i < NS; i++) {
+			  //for dual right alignment (page 624 of reference manual)
+			  Wave_LUT[i] = (Wave_LUT[i] << 16) | (Wave_LUT[i] >> 2);
+	}
+	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
+	HAL_TIM_Base_Start(&htim6);
+	init_adc_2();
+	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	// uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
-	// HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
 	
 	// status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 }
@@ -242,8 +242,8 @@ void app_loop(){
     // // if (CheckButtonState(SW1_GPIO_Port,SW1_Pin,time)){
     // // 	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
     // // }
-	HAL_Delay(1000);
-	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
+	// HAL_Delay(1000);
+	// HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
 }
 
 
