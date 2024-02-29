@@ -1,0 +1,6 @@
+{
+    "cmake.sourceDirectory": "/home/achakraborty/Documents/ade/oae_firmware/OAE_PopTarts",
+    "files.associations": {
+        "transform_functions.h": "c"
+    }
+}
