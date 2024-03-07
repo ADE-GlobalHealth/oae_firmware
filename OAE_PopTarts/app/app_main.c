@@ -38,8 +38,8 @@ uint32_t Wave_LUT[NS] = {
 	        };
 
 
-volatile uint32_t data_i2s[128];
-volatile uint32_t data_i2s_2[128];
+volatile uint32_t data_i2s[4096];
+volatile uint32_t data_i2s_2[4096];
 // TLV320ADC3120 dev;
 
 
@@ -161,44 +161,45 @@ void end_adc(){
 	if (status != DEV_STS1_MODE_STS_SLEEP) HAL_Delay(1000);
 }
 
-// arm_rfft_fast_instance_f32 S_;
-// arm_rfft_fast_instance_f32* S = &S_;
+arm_rfft_fast_instance_f32 S_;
+arm_rfft_fast_instance_f32* S = &S_;
 
-// int fft_cycles = 10; //must be even to start with
+int fft_cycles = 10; //must be even to start with
 
-// float32_t fft_output[10+1]; //would be length of fft_cycles +1 for inital 
+float32_t fft_output[10+1]; //would be length of fft_cycles +1 for inital 
 
-// void fft(){
-// 	int* current_buffer = fft_cycles % 2 == 0 ? data_i2s : data_i2s_2;
-// 	int* next_buffer = fft_cycles % 2 == 0 ? data_i2s_2 : data_i2s;
-// 	for (int i = 0; i < n_data; i++){
-// 		current_buffer[i] = (float) current_buffer[i];
-// 	}
-// 	arm_rfft_fast_init_f32(S, 128);
-// 	arm_rfft_fast_f32(S,current_buffer, fft_output, 0);
-// 	// further analysis here & output
-// 	//median of noise bins
-// 	// if good
-// 		// mean of noise
-// 		// mean of dpoae
-// 	//sum noise and dpoae into total 
-// 	//counter of good vs bad -> if test bad
-// 	// keep dpoae total and log it
-// 	// divide noise and dpoae by total
-// 	// subtract noise from dpoae
-// 	// log to find snr
+void fft(){
+	int* current_buffer = fft_cycles % 2 == 0 ? data_i2s : data_i2s_2;
+	int* next_buffer = fft_cycles % 2 == 0 ? data_i2s_2 : data_i2s;
+
+	for (int i = 0; i < n_data; i++){
+		current_buffer[i] = (float) current_buffer[i];
+	}
+	arm_rfft_fast_init_f32(S, 4096);
+	arm_rfft_fast_f32(S,current_buffer, fft_output, 0);
+	// further analysis here & output
+	//median of noise bins
+	// if good
+		// mean of noise
+		// mean of dpoae
+	//sum noise and dpoae into total 
+	//counter of good vs bad -> if test bad
+	// keep dpoae total and log it
+	// divide noise and dpoae by total
+	// subtract noise from dpoae
+	// log to find snr
 
 
-// 	if (fft_cycles > 0)
-// 	{
-// 		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) next_buffer, sizeof(next_buffer));
-// 		fft_cycles--;
-// 	}
-// }
+	if (fft_cycles > 0)
+	{
+		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) next_buffer, sizeof(next_buffer));
+		fft_cycles--;
+	}
+}
 
 
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
-	// fft();
+	fft();
 }
 
 void app_setup(){
