@@ -1,4 +1,6 @@
 #include <arm_math.h>
+#include <stdbool.h>
+
 
 #define FFT_BUFFER_SIZE 4096
 #define FFT_OAE_IDX 122
@@ -17,19 +19,29 @@ typedef struct {
     int32_t bufB[FFT_BUFFER_SIZE];
     int32_t sample_buffer[FFT_BUFFER_SIZE];
     bool isA;
-} pingpong_buffers;
+} pingpong_buffers_t;
 
 typedef struct {
     float32_t window_lut[FFT_BUFFER_SIZE];
-    arm_rfft_fast_instance_f32 rfft;
+    arm_rfft_fast_instance_f32 fft;
     int32_t num_sub_nf_threshold;
     float32_t oae_accumulator;
-    float32_t multipurpose_buf0 [FFT_BUFFER_SIZE];
-    float32_t multipurpose_buf1 [FFT_BUFFER_SIZE];
-} oae_data;
+} oae_data_t;
 
+oae_data_t* setup_oae_data(){
+    oae_data_t *oae_data_ptr = (oae_data_t*)malloc(sizeof(oae_data_t));
 
-void oae_algorithm(float32_t* accumulator, uint32_t* num_successful, const int32_t* sample_buffer, arm_rfft_fast_instance_f32* rfft, float32_t* window_lut) {
+    #if FFT_BUFFER_SIZE != 4096
+        #error Currently is only able to deal with 4096 sized fft buffer
+    #endif
+    arm_cfft_init_4096_f32(&(oae_data_ptr->fft));
+    oae_data_ptr->num_sub_nf_threshold = 0;
+    oae_data_ptr->oae_accumulator = 0;
+    arm_hamming_f32(&(oae_data_ptr->window_lut), FFT_BUFFER_SIZE);
+    return oae_data_ptr;
+}
+
+void oae_algorithm(oae_data_t *oae_data, const int32_t* sample_buffer) {
     static float32_t converted_buffer[FFT_BUFFER_SIZE];
     static float32_t windowed_buffer[FFT_BUFFER_SIZE];
     static float32_t fft_output[FFT_BUFFER_SIZE*2];
@@ -38,10 +50,10 @@ void oae_algorithm(float32_t* accumulator, uint32_t* num_successful, const int32
 
     ADCout_to_float32(sample_buffer, converted_buffer, FFT_BUFFER_SIZE);
 
-    arm_mult_f32(window_lut, converted_buffer, windowed_buffer, FFT_BUFFER_SIZE);
+    arm_mult_f32(oae_data->window_lut, converted_buffer, windowed_buffer, FFT_BUFFER_SIZE);
     
     
-    arm_rfft_fast_f32(rfft,converted_buffer, fft_output, 0);
+    arm_rfft_fast_f32(&(oae_data->fft),converted_buffer, fft_output, 0);
     
     // Convert to fft magnitudes
     arm_cmplx_mag_f32(fft_output, fft_output_abs, FFT_BUFFER_SIZE);
@@ -57,8 +69,8 @@ void oae_algorithm(float32_t* accumulator, uint32_t* num_successful, const int32
     if (average_noise_floor > NF_MAXIMUM) {
         exit();
     } else {
-        *accumulator += fft_output_abs[FFT_OAE_IDX];
-        *num_successful += 1;
+        oae_data->oae_accumulator += fft_output_abs[FFT_OAE_IDX];
+        oae_data->num_sub_nf_threshold += 1;
     }
 }
 
@@ -76,18 +88,18 @@ void ADCbuff_to_float32(int32_t* pSrc, float32_t* pDst, uint32_t numSamples) {
 }
 
 
-void switch_pingpong_buffer(pingpong_buffers * bufs, int32_t ** DMA_addr){
+void switch_pingpong_buffer(pingpong_buffers_t * bufs, int32_t ** DMA_addr){
     // Switch the pingpong buffer
     if(bufs->isA){
         *DMA_addr = bufs->bufB;
     } else {
         *DMA_addr = bufs->bufA;
     }
-    bufs->isA = ~bufs->isA;
+    bufs->isA = !bufs->isA;
 }
 
 
-void ADC_half_transfer(pingpong_buffers * bufs){
+void ADC_half_transfer(pingpong_buffers_t * bufs){
     // Expects that bufA and bufB are the length of a full fft buffer (FFT_BUFFER_SIZE)
     // Sample buffer is the output.
     if (bufs->isA)   {
@@ -99,7 +111,9 @@ void ADC_half_transfer(pingpong_buffers * bufs){
     }
     
 }
-void ADC_full_transfer(pingpong_buffers * bufs, int32_t ** DMA_addr){
+
+
+void ADC_full_transfer(pingpong_buffers_t * bufs, int32_t ** DMA_addr){
     // Gets called when
     // Expects that bufA and bufB are the length of a full fft buffer (FFT_BUFFER_SIZE)
     // Sample buffer is the output.
@@ -111,3 +125,4 @@ void ADC_full_transfer(pingpong_buffers * bufs, int32_t ** DMA_addr){
     }
     switch_pingpong_buffer(bufs, DMA_addr);
 }
+
