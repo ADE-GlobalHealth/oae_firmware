@@ -10,6 +10,25 @@ typedef enum {
     FULL_TRANSFER
     } DMA_status;
 
+
+// Struct to hold the ADC DMA pingpong buffers
+typedef struct {
+    int32_t bufA[FFT_BUFFER_SIZE];
+    int32_t bufB[FFT_BUFFER_SIZE];
+    int32_t sample_buffer[FFT_BUFFER_SIZE];
+    bool isA;
+} pingpong_buffers;
+
+typedef struct {
+    float32_t window_lut[FFT_BUFFER_SIZE];
+    arm_rfft_fast_instance_f32 rfft;
+    int32_t num_sub_nf_threshold;
+    float32_t oae_accumulator;
+    float32_t multipurpose_buf0 [FFT_BUFFER_SIZE];
+    float32_t multipurpose_buf1 [FFT_BUFFER_SIZE];
+} oae_data;
+
+
 void oae_algorithm(float32_t* accumulator, uint32_t* num_successful, const int32_t* sample_buffer, arm_rfft_fast_instance_f32* rfft, float32_t* window_lut) {
     static float32_t converted_buffer[FFT_BUFFER_SIZE];
     static float32_t windowed_buffer[FFT_BUFFER_SIZE];
@@ -57,39 +76,38 @@ void ADCbuff_to_float32(int32_t* pSrc, float32_t* pDst, uint32_t numSamples) {
 }
 
 
-void switch_pingpong_buffer(const int32_t* bufA, const int32_t* bufB, int32_t ** DMA_addr, bool isA){
+void switch_pingpong_buffer(pingpong_buffers * bufs, int32_t ** DMA_addr){
     // Switch the pingpong buffer
-    if(isA){
-        DMA_addr = bufB;
+    if(bufs->isA){
+        *DMA_addr = bufs->bufB;
     } else {
-        DMA_addr = bufA;
+        *DMA_addr = bufs->bufA;
     }
-    isA = ~isA;
+    bufs->isA = ~bufs->isA;
 }
 
-void get_sample_buffer(int* sample_buffer, const int32_t* bufA, const int32_t* bufB, const bool isA, DMA_status ADC_status){
+
+void ADC_half_transfer(pingpong_buffers * bufs){
     // Expects that bufA and bufB are the length of a full fft buffer (FFT_BUFFER_SIZE)
     // Sample buffer is the output.
-    if (isA){
-        if (ADC_status == HALF_TRANSFER) {
-            memcpy(sample_buffer,  bufB+FFT_BUFFER_SIZE/2, FFT_BUFFER_SIZE/2);
-            memcpy(sample_buffer+FFT_BUFFER_SIZE/2,  bufA, FFT_BUFFER_SIZE/2);
-        }
-        else {
-            memcpy(sample_buffer,  bufA, FFT_BUFFER_SIZE/2);
-        }
-    }else{
-        if (ADC_status == HALF_TRANSFER) {
-            memcpy(sample_buffer,  bufA+FFT_BUFFER_SIZE/2, FFT_BUFFER_SIZE/2);
-            memcpy(sample_buffer+FFT_BUFFER_SIZE/2,  bufB, FFT_BUFFER_SIZE/2);
-        }
-        else {
-            memcpy(sample_buffer,  bufB, FFT_BUFFER_SIZE/2);
-        }
+    if (bufs->isA)   {
+        memcpy(bufs->sample_buffer, bufs->bufB+FFT_BUFFER_SIZE/2, FFT_BUFFER_SIZE/2);
+        memcpy(bufs->sample_buffer+FFT_BUFFER_SIZE/2, bufs->bufA, FFT_BUFFER_SIZE/2);
+    } else {
+        memcpy(bufs->sample_buffer, bufs->bufA+FFT_BUFFER_SIZE/2, FFT_BUFFER_SIZE/2);
+        memcpy(bufs->sample_buffer+FFT_BUFFER_SIZE/2, bufs->bufB, FFT_BUFFER_SIZE/2);
     }
-}
-
-void ADC_interrupt_routine(){
-    // Handles the ADC DMA full and half transfer routine
     
+}
+void ADC_full_transfer(pingpong_buffers * bufs, int32_t ** DMA_addr){
+    // Gets called when
+    // Expects that bufA and bufB are the length of a full fft buffer (FFT_BUFFER_SIZE)
+    // Sample buffer is the output.
+    if (bufs->isA) {
+        memcpy(bufs->sample_buffer,  bufs->bufA, FFT_BUFFER_SIZE/2);
+    }
+    else {
+        memcpy(bufs->sample_buffer,  bufs->bufB, FFT_BUFFER_SIZE/2);
+    }
+    switch_pingpong_buffer(bufs, DMA_addr);
 }
