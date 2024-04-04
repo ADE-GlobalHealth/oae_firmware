@@ -46,6 +46,13 @@ volatile uint32_t data_i2s_2[4096];
 uint8_t data1 = 0x01;
 uint8_t* pData = &data1;
 
+/**
+ * Write to a register over i2c
+ * 
+ * @param devaddr The i2c device address to write to.
+ * @param memaddr The register address to write to.
+ * @param data2 The data to write to the register.
+*/
 void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2){
 	data1 = data2;
 	// Device address is 1001110, left shifted by 1 is 9C
