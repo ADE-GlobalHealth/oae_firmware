@@ -47,7 +47,7 @@ uint8_t data1 = 0x01;
 uint8_t* pData = &data1;
 
 /**
- * Write to a register over i2c
+ * Write to a register in a peripheral over i2c.
  * 
  * @param devaddr The i2c device address to write to.
  * @param memaddr The register address to write to.
@@ -58,6 +58,17 @@ void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2){
 	// Device address is 1001110, left shifted by 1 is 9C
 	pData = &data1;
 	HAL_I2C_Mem_Write(&hi2c3, devaddr, memaddr, 1,pData, 1, HAL_MAX_DELAY);
+}
+
+/**
+ * Read a register from a peripheral over i2c.
+ * 
+ * @param devaddr The i2c device address to read from.
+ * @param memaddr The register address to read from.
+ * @param data A data buffer to store the read data.
+*/
+void r(uint16_t devaddr, uint16_t memaddr, uint8_t* data){
+  HAL_I2C_Mem_Read(&hi2c3, devaddr, memaddr, 1, data, 1, HAL_MAX_DELAY);
 }
 
 #include "tlv320adcx120_page0.h"
@@ -144,17 +155,21 @@ void init_adc(){
 
 void init_adc_2(){
 	HAL_Delay(1000);
-	w(0x9C,0x02, 0x81);
-	HAL_Delay(10);
-	//Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
-	w(0x9C,0x73,0xC0);
+  // Wake-up the device with an I2C write into P0_R2 using an internal AREG
+	w(0x9C, 0x02, 0x81);
+  uint8_t read_data = UINT8_MAX;
+  r(0x9C, 0x02, &read_data);
 
-	w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
-	//Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
-	w(0x9C,0x74,0xC0);
+	// HAL_Delay(10);
+	// //Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
+	// w(0x9C,0x73,0xC0);
 
-	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
-	w(0x9C,0x75,0xE0);
+	// w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
+	// //Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+	// w(0x9C,0x74,0xC0);
+
+	// // Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
+	// w(0x9C,0x75,0xE0);
 }
 
 void end_adc(){
@@ -168,8 +183,8 @@ void end_adc(){
 	if (status != DEV_STS1_MODE_STS_SLEEP) HAL_Delay(1000);
 }
 
-arm_rfft_fast_instance_f32 S_;
-arm_rfft_fast_instance_f32* S = &S_;
+// arm_rfft_fast_instance_f32 S_;
+// arm_rfft_fast_instance_f32* S = &S_;
 
 int fft_cycles = 10; //must be even to start with
 
@@ -182,8 +197,8 @@ void fft(){
 	for (int i = 0; i < n_data; i++){
 		current_buffer[i] = (float) current_buffer[i];
 	}
-	arm_rfft_fast_init_f32(S, 4096);
-	arm_rfft_fast_f32(S,current_buffer, fft_output, 0);
+	// arm_rfft_fast_init_f32(S, 4096);
+	// arm_rfft_fast_f32(S,current_buffer, fft_output, 0);
 	// further analysis here & output
 	//median of noise bins
 	// if good
