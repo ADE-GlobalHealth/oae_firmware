@@ -155,21 +155,31 @@ void init_adc(){
 
 void init_adc_2(){
 	HAL_Delay(1000);
+	uint8_t read_data = UINT8_MAX;
+	r(0x9C, 0x02, &read_data);
   // Wake-up the device with an I2C write into P0_R2 using an internal AREG
-	w(0x9C, 0x02, 0x81);
-  uint8_t read_data = UINT8_MAX;
-  r(0x9C, 0x02, &read_data);
+    w(0x9C, 0x02, 0x81);
+  	r(0x9C, 0x02, &read_data);
 
-	// HAL_Delay(10);
-	// //Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
-	// w(0x9C,0x73,0xC0);
+	 HAL_Delay(10);
+	 //Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
+	 w(0x9C, 0x73, 0xC0);
+	 r(0x9C, 0x73, &read_data);
 
-	// w(0x9C,0x07,ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
-	// //Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
-	// w(0x9C,0x74,0xC0);
+	 // ASI_CFG0_FORMAT_I2S = (uint8_t) 0x40
+	 // ASI_CFG0_WLEN_16_BITS = (uint8_t) 0x00
+	 //w(0x9C, 0x07, ASI_CFG0_FORMAT_I2S | ASI_CFG0_WLEN_16_BITS);
+	 // Configure output as i2s
+	 w(0x9C, 0x07, 0x40);
+	 r(0x9C, 0x07, &read_data);
 
-	// // Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
-	// w(0x9C,0x75,0xE0);
+	 //Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+	 w(0x9C, 0x74, 0xC0);
+	 r(0x9C, 0x74, &read_data);
+
+	 // Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
+	 w(0x9C, 0x75, 0xE0);
+	 r(0x9C, 0x75, &read_data);
 }
 
 void end_adc(){
