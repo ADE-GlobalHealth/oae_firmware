@@ -157,6 +157,7 @@ void init_adc_2(){
 	HAL_Delay(1000);
 	uint8_t read_data = UINT8_MAX;
 	r(0x9C, 0x02, &read_data);
+	r(0x9C, 0x13, &read_data);
   // Wake-up the device with an I2C write into P0_R2 using an internal AREG
     w(0x9C, 0x02, 0x81);
   	r(0x9C, 0x02, &read_data);
@@ -180,6 +181,17 @@ void init_adc_2(){
 	 // Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
 	 w(0x9C, 0x75, 0xE0);
 	 r(0x9C, 0x75, &read_data);
+
+	 r(0x9C, 0x15, &read_data);
+	 HAL_Delay(1000);
+	 r(0x9C, 0x07, &read_data);
+	 r(0x9C, 0x08, &read_data);
+	 r(0x9C, 0x09, &read_data);
+	 r(0x9C, 0x15, &read_data);
+	 r(0x9C, 0x76, &read_data);
+	 r(0x9C, 0x77, &read_data);
+	 r(0x9C, 0x13, &read_data);
+
 }
 
 void end_adc(){
