@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 
-#define FFT_BUFFER_SIZE 4096
+#define FFT_BUFFER_SIZE 2048
 #define FFT_OAE_IDX 122
 #define NUM_NF_VALS 3*2 // Has to be a multiple of 2
 #define NF_MAXIMUM 10000.0 // Placeholder Value. TODO: Update based on histograms of actual values and sensitivity.
@@ -25,14 +25,15 @@ typedef struct {
     float32_t window_lut[FFT_BUFFER_SIZE];
     arm_rfft_fast_instance_f32 fft;
     int32_t num_sub_nf_threshold;
+    int32_t num_total_tests;
     float32_t oae_accumulator;
 } oae_data_t;
 
 oae_data_t* setup_oae_data(){
     oae_data_t *oae_data_ptr = (oae_data_t*)malloc(sizeof(oae_data_t));
 
-    #if FFT_BUFFER_SIZE != 4096
-        #error Currently is only able to deal with 4096 sized fft buffer
+    #if FFT_BUFFER_SIZE != 2048
+        #error Currently is only able to deal with 2048 sized fft buffer
     #endif
     arm_cfft_init_4096_f32(&(oae_data_ptr->fft));
     oae_data_ptr->num_sub_nf_threshold = 0;
@@ -43,9 +44,10 @@ oae_data_t* setup_oae_data(){
 
 void oae_algorithm(oae_data_t *oae_data, const int32_t* sample_buffer) {
     static float32_t converted_buffer[FFT_BUFFER_SIZE];
-    static float32_t windowed_buffer[FFT_BUFFER_SIZE];
+    float32_t * windowed_buffer = converted_buffer;
+
     static float32_t fft_output[FFT_BUFFER_SIZE*2];
-    static float32_t fft_output_abs[FFT_BUFFER_SIZE];
+    float32_t * fft_output_abs = converted_buffer;
     float32_t average_noise_floor;
 
     ADCout_to_float32(sample_buffer, converted_buffer, FFT_BUFFER_SIZE);
@@ -80,6 +82,7 @@ float32_t convert_ADCout_to_float32(int32_t adc_value) {
         return adc_value >> 8;
 }
 
+
 void ADCbuff_to_float32(int32_t* pSrc, float32_t* pDst, uint32_t numSamples) {
     for (int i = 0; i < numSamples; i++){
         pDst[i] = pSrc[i] >> 8;
@@ -87,6 +90,7 @@ void ADCbuff_to_float32(int32_t* pSrc, float32_t* pDst, uint32_t numSamples) {
 
 }
 
+//void interpolate_error_samples()
 
 void switch_pingpong_buffer(pingpong_buffers_t * bufs, int32_t ** DMA_addr){
     // Switch the pingpong buffer
