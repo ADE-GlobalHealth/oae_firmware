@@ -38,7 +38,7 @@ uint32_t Wave_LUT[NS] = {
 	        };
 
 
-volatile uint32_t data_i2s[4096];
+volatile uint16_t data_i2s[4096];
 volatile uint32_t data_i2s_2[4096];
 // TLV320ADC3120 dev;
 
@@ -272,14 +272,14 @@ bool endflag = false;
 void app_loop(){
 //	w(0x12,0x02,0x00);
 	// // DO not use HAL_Delay -> generates an interrupt that halts DMA channels
-    // time = HAL_GetTick();
-    // if ((time - blink_time) > 500) {
-    //     HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-    //     HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
-    //     blink_time = time;
-	// 	counter++;
-	// 	//w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
-    // }
+    time = HAL_GetTick();
+    if ((time - blink_time) > 500) {
+        HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+        HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
+        blink_time = time;
+		counter++;
+		//w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
+    }
 	// if (counter == 200 && endflag == false){
 	// 	// end_adc();
 	// 	endflag = true;

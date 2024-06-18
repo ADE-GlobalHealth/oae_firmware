@@ -192,7 +192,7 @@ typedef struct
 
   uint32_t FSDefinition;       /*!< Specifies the Frame synchronization definition.
                                     This parameter can be a value of @ref SAI_Block_FS_Definition */
-b
+
   uint32_t FSPolarity;         /*!< Specifies the Frame synchronization Polarity.
                                     This parameter can be a value of @ref SAI_Block_FS_Polarity */
 

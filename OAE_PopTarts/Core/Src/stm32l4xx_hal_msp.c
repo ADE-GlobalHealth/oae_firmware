@@ -20,7 +20,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -64,6 +63,7 @@ extern DMA_HandleTypeDef hdma_dac_ch1;
   */
 void HAL_MspInit(void)
 {
+
   /* USER CODE BEGIN MspInit 0 */
 
   /* USER CODE END MspInit 0 */
@@ -340,15 +340,15 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
 
       /* Peripheral DMA init*/
 
-    hdma_sai2_a.Instance = DMA2_Channel3;
+    hdma_sai2_a.Instance = DMA1_Channel6;
     hdma_sai2_a.Init.Request = DMA_REQUEST_1;
     hdma_sai2_a.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_sai2_a.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_sai2_a.Init.MemInc = DMA_MINC_ENABLE;
     hdma_sai2_a.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_sai2_a.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    hdma_sai2_a.Init.Mode = DMA_CIRCULAR;
-    hdma_sai2_a.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    hdma_sai2_a.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_sai2_a.Init.Mode = DMA_NORMAL;
+    hdma_sai2_a.Init.Priority = DMA_PRIORITY_HIGH;
     if (HAL_DMA_Init(&hdma_sai2_a) != HAL_OK)
     {
       Error_Handler();
