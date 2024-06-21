@@ -39,7 +39,8 @@ uint32_t Wave_LUT[NS] = {
 
 
 volatile uint16_t data_i2s[4096];
-volatile uint32_t data_i2s_2[4096];
+volatile uint16_t data_i2s_2[4096];
+uint8_t first_time = 1;
 // TLV320ADC3120 dev;
 
 
@@ -243,8 +244,19 @@ void fft(){
 
 
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
-	fft();
+	uint16_t a = 1;
+	// if(first_time) {
+	// 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s_2, sizeof(data_i2s_2));
+	// 	first_time = 0;
+	// }
+	// else {
+	// 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	// 	first_time = 1;
+	// }
 }
+
+
+uint32_t blink_time = 0;
 
 void app_setup(){
 	for (int i = 0; i < NS; i++) {
@@ -259,13 +271,11 @@ void app_setup(){
 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
 	
 	// status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
+	blink_time = HAL_GetTick();
 }
 
 
-
-
 uint32_t time = 0;
-uint32_t blink_time = 0;
 // bool CheckButtonState(GPIO_TypeDef* port,GPIO_TypeDef* pin, unsigned long time);
 uint8_t counter = 0;
 bool endflag = false;
@@ -273,11 +283,12 @@ void app_loop(){
 //	w(0x12,0x02,0x00);
 	// // DO not use HAL_Delay -> generates an interrupt that halts DMA channels
     time = HAL_GetTick();
-    if ((time - blink_time) > 500) {
-        HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-        HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
-        blink_time = time;
-		counter++;
+    if ((time - blink_time) > 10000) {
+		uint16_t b = 1;
+        // HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+        // HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
+        // blink_time = time;
+		// counter++;
 		//w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
     }
 	// if (counter == 200 && endflag == false){
