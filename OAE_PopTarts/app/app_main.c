@@ -268,7 +268,7 @@ void app_setup(){
 	init_adc_2();
 	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	// uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
-	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, sizeof(data_i2s));
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, 4096);
 	
 	// status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 	blink_time = HAL_GetTick();
