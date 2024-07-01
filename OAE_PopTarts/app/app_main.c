@@ -37,6 +37,18 @@ uint32_t Wave_LUT[NS] = {
 	                1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
 	        };
 
+uint32_t Wave_LUT2[NS] = {
+	1000, 1049, 1098, 1147, 1195, 1243, 1290, 1337, 1383, 1428, 1471, 1514, 1556, 1596, 1634,
+1672, 1707, 1741, 1773, 1803, 1831, 1858, 1882, 1904, 1924, 1942, 1957, 1970, 1981, 1989,
+1995, 1999, 2000, 1999, 1995, 1989, 1981, 1970, 1957, 1942, 1924, 1904, 1882, 1858, 1831,
+1803, 1773, 1741, 1707, 1672, 1634, 1596, 1556, 1514, 1471, 1428, 1383, 1337, 1290, 1243,
+1195, 1147, 1098, 1049, 1000, 951, 902, 853, 805, 757, 710, 663, 617, 572, 529,
+486, 444, 404, 366, 328, 293, 259, 227, 197, 169, 142, 118, 96, 76, 58,
+43, 30, 19, 11, 5, 1, 0, 1, 5, 11, 19, 30, 43, 58, 76,
+96, 118, 142, 169, 197, 227, 259, 293, 328, 366, 404, 444, 486, 529, 572,
+617, 663, 710, 757, 805, 853, 902, 951, 1000
+};
+
 
 volatile uint16_t data_i2s[4096];
 volatile uint16_t data_i2s_2[4096];
@@ -262,8 +274,10 @@ void app_setup(){
 	for (int i = 0; i < NS; i++) {
 			  //for dual right alignment (page 624 of reference manual)
 			  Wave_LUT[i] = (Wave_LUT[i] << 16) | (Wave_LUT[i] >> 2);
+			  Wave_LUT2[i] = (Wave_LUT2[i] << 16) | (Wave_LUT2[i] >> 2);
 	}
-	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
+	// HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
+	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT2, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim6);
 	init_adc_2();
 	// TLV320ADC3120_Initialize(&dev, &hi2c3);
