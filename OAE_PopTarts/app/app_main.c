@@ -14,6 +14,8 @@
 #define NS  4096
 #define n_data 1000
 #define M_PI 3.14159265358979323846
+#define LUT_SIZE 128
+#define BUFFER_SIZE 4096
 #include <stdbool.h>
 
 #include <stm32l4xx_hal_sai.h>
@@ -25,33 +27,32 @@ extern TIM_HandleTypeDef htim6;
 extern SAI_HandleTypeDef hsai_BlockA2;
 extern I2C_HandleTypeDef hi2c3;
 
-uint32_t Wave_LUT[NS] = {
-	                2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
-	                3431, 3504, 3574, 3639, 3701, 3759, 3812, 3861, 3906, 3946, 3982, 4013, 4039, 4060, 4076,
-	                4087, 4094, 4095, 4091, 4082, 4069, 4050, 4026, 3998, 3965, 3927, 3884, 3837, 3786, 3730,
-	                3671, 3607, 3539, 3468, 3394, 3316, 3235, 3151, 3064, 2975, 2883, 2790, 2695, 2598, 2500,
-	                2400, 2300, 2199, 2098, 1997, 1896, 1795, 1695, 1595, 1497, 1400, 1305, 1212, 1120, 1031,
-	                944, 860, 779, 701, 627, 556, 488, 424, 365, 309, 258, 211, 168, 130, 97,
-	                69, 45, 26, 13, 4, 0, 1, 8, 19, 35, 56, 82, 113, 149, 189,
-	                234, 283, 336, 394, 456, 521, 591, 664, 740, 820, 902, 987, 1075, 1166, 1258,
-	                1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
-	        };
+// uint32_t Wave_LUT[NS] = {
+// 	                2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
+// 	                3431, 3504, 3574, 3639, 3701, 3759, 3812, 3861, 3906, 3946, 3982, 4013, 4039, 4060, 4076,
+// 	                4087, 4094, 4095, 4091, 4082, 4069, 4050, 4026, 3998, 3965, 3927, 3884, 3837, 3786, 3730,
+// 	                3671, 3607, 3539, 3468, 3394, 3316, 3235, 3151, 3064, 2975, 2883, 2790, 2695, 2598, 2500,
+// 	                2400, 2300, 2199, 2098, 1997, 1896, 1795, 1695, 1595, 1497, 1400, 1305, 1212, 1120, 1031,
+// 	                944, 860, 779, 701, 627, 556, 488, 424, 365, 309, 258, 211, 168, 130, 97,
+// 	                69, 45, 26, 13, 4, 0, 1, 8, 19, 35, 56, 82, 113, 149, 189,
+// 	                234, 283, 336, 394, 456, 521, 591, 664, 740, 820, 902, 987, 1075, 1166, 1258,
+// 	                1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
+// 	        };
 
-uint32_t Wave_LUT2[NS] = {
-	1000, 1049, 1098, 1147, 1195, 1243, 1290, 1337, 1383, 1428, 1471, 1514, 1556, 1596, 1634,
-1672, 1707, 1741, 1773, 1803, 1831, 1858, 1882, 1904, 1924, 1942, 1957, 1970, 1981, 1989,
-1995, 1999, 2000, 1999, 1995, 1989, 1981, 1970, 1957, 1942, 1924, 1904, 1882, 1858, 1831,
-1803, 1773, 1741, 1707, 1672, 1634, 1596, 1556, 1514, 1471, 1428, 1383, 1337, 1290, 1243,
-1195, 1147, 1098, 1049, 1000, 951, 902, 853, 805, 757, 710, 663, 617, 572, 529,
-486, 444, 404, 366, 328, 293, 259, 227, 197, 169, 142, 118, 96, 76, 58,
-43, 30, 19, 11, 5, 1, 0, 1, 5, 11, 19, 30, 43, 58, 76,
-96, 118, 142, 169, 197, 227, 259, 293, 328, 366, 404, 444, 486, 529, 572,
-617, 663, 710, 757, 805, 853, 902, 951, 1000
+uint32_t Wave_LUT[NS] = {
+	0x07d007d0, 0x09b60a15, 0x0b7f0c27, 0x0d0f0dda, 0x0e4f0f08, 0x0f2b0f96, 0x0f960f7a, 0x0f8a0eb4, 0x0f080d56, 0x0e160b7f, 0x0cc50956, 0x0b27070c, 0x095604d3, 0x076e02db, 0x058b0151,
+0x03cc0056, 0x024a0000, 0x011d0056, 0x00560151, 0x000202db, 0x002604d3, 0x00c0070c, 0x01c60956, 0x03290b7f, 0x04d30d56, 0x06ab0eb4, 0x08940f7a, 0x0a720f96, 0x0c270f08, 0x0d9a0dda,
+0x0eb40c27, 0x0f640a15, 0x0fa007d0, 0x0f64058b, 0x0eb40379, 0x0d9a01c6, 0x0c270098, 0x0a72000a, 0x08940026, 0x06ab00ec, 0x04d3024a, 0x03290421, 0x01c6064a, 0x00c00894, 0x00260acd,
+0x00020cc5, 0x00560e4f, 0x011d0f4a, 0x024a0fa0, 0x03cc0f4a, 0x058b0e4f, 0x076e0cc5, 0x09560acd, 0x0b270894, 0x0cc5064a, 0x0e160421, 0x0f08024a, 0x0f8a00ec, 0x0f960026, 0x0f2b000a,
+0x0e4f0098, 0x0d0f01c6, 0x0b7f0379, 0x09b6058b, 0x07d007d0, 0x05ea0a15, 0x04210c27, 0x02910dda, 0x01510f08, 0x00750f96, 0x000a0f7a, 0x00160eb4, 0x00980d56, 0x018a0b7f, 0x02db0956,
+0x0479070c, 0x064a04d3, 0x083202db, 0x0a150151, 0x0bd40056, 0x0d560000, 0x0e830056, 0x0f4a0151, 0x0f9e02db, 0x0f7a04d3, 0x0ee0070c, 0x0dda0956, 0x0c770b7f, 0x0acd0d56, 0x08f50eb4,
+0x070c0f7a, 0x052e0f96, 0x03790f08, 0x02060dda, 0x00ec0c27, 0x003c0a15, 0x000007d0, 0x003c058b, 0x00ec0379, 0x020601c6, 0x03790098, 0x052e000a, 0x070c0026, 0x08f500ec, 0x0acd024a,
+0x0c770421, 0x0dda064a, 0x0ee00894, 0x0f7a0acd, 0x0f9e0cc5, 0x0f4a0e4f, 0x0e830f4a, 0x0d560fa0, 0x0bd40f4a, 0x0a150e4f, 0x08320cc5, 0x064a0acd, 0x04790894, 0x02db064a, 0x018a0421,
+0x0098024a, 0x001600ec, 0x000a0026, 0x0075000a, 0x01510098, 0x029101c6, 0x04210379, 0x05ea058b,
 };
 
-
-volatile uint16_t data_i2s[4096];
-volatile uint16_t data_i2s_2[4096];
+volatile uint16_t data_i2s[BUFFER_SIZE];
+volatile uint16_t data_i2s_2[BUFFER_SIZE];
 uint8_t first_time = 1;
 // TLV320ADC3120 dev;
 
@@ -249,7 +250,7 @@ void fft(){
 
 	if (fft_cycles > 0)
 	{
-		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) next_buffer, sizeof(next_buffer));
+		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) next_buffer, BUFFER_SIZE);
 		fft_cycles--;
 	}
 }
@@ -271,18 +272,16 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
 uint32_t blink_time = 0;
 
 void app_setup(){
-	for (int i = 0; i < NS; i++) {
-			  //for dual right alignment (page 624 of reference manual)
-			  Wave_LUT[i] = (Wave_LUT[i] << 16) | (Wave_LUT[i] >> 2);
-			  Wave_LUT2[i] = (Wave_LUT2[i] << 16) | (Wave_LUT2[i] >> 2);
-	}
-	// HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
-	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT2, (uint32_t*)Wave_LUT, 128, DAC_ALIGN_12B_R);
+	// for (int i = 0; i < NS; i++) {
+	// 		  //for dual right alignment (page 624 of reference manual)
+	// 		  Wave_LUT[i] = (Wave_LUT[i] << 16) | (Wave_LUT[i] >> 2);
+	// }
+	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, LUT_SIZE, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim6);
 	init_adc_2();
 	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	// uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
-	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, 4096);
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, BUFFER_SIZE);
 	
 	// status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 	blink_time = HAL_GetTick();

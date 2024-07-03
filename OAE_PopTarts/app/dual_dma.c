@@ -19,7 +19,7 @@ Configuration prerequisites:
   set increment on memory only, and set buffer to circular mode.
 */
 HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
-  DAC_HandleTypeDef * hdac, uint32_t Channel, uint32_t * pData, uint32_t * pData2, uint32_t Length, uint32_t Alignment) {
+  DAC_HandleTypeDef * hdac, uint32_t Channel, uint32_t * pData, uint32_t Length, uint32_t Alignment) {
   uint32_t tmpreg = 0;
   /* Check the parameters */
   assert_param(IS_DAC_CHANNEL_INSTANCE(hdac -> Instance, Channel));
@@ -84,6 +84,7 @@ HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
     hdac -> DMA_Handle1 -> XferErrorCallback = DAC_DMAErrorCh1;
     /* Enable the selected DAC channel1 DMA request */
     SET_BIT(hdac -> Instance -> CR, DAC_CR_DMAEN1);
+
     /* Case of use of channel 1+2 - dual mode */
     switch (Alignment) {
     case DAC_ALIGN_12B_R:
@@ -114,10 +115,10 @@ HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
     // dual channel
     /* Enable the DAC DMA underrun interrupt */
     __HAL_DAC_ENABLE_IT(hdac, DAC_IT_DMAUDR1);
-    __HAL_DAC_ENABLE_IT(hdac, DAC_IT_DMAUDR2);
+    // __HAL_DAC_ENABLE_IT(hdac, DAC_IT_DMAUDR2);
     /* Enable the DMA Channel */
     HAL_DMA_Start_IT(hdac -> DMA_Handle1, (uint32_t) pData, tmpreg, Length);
-    HAL_DMA_Start_IT(hdac -> DMA_Handle2, (uint32_t) pData2, tmpreg, Length);
+    // HAL_DMA_Start_IT(hdac -> DMA_Handle2, (uint32_t) pData, tmpreg, Length);
   } /* Process Unlocked */
   __HAL_UNLOCK(hdac); /* Enable the Peripheral */
   if (Channel == DAC_CHANNEL_12D) {
