@@ -1,33 +1,12 @@
-#include <arm_math.h>
-#include <stdbool.h>
+/*
+ * oae_algorithm.c
+ *
+ *  Created on: February, 2024
+ *      Author: benjipugh
+ */
 
 
-#define FFT_BUFFER_SIZE 2048
-#define FFT_OAE_IDX 122
-#define NUM_NF_VALS 3*2 // Has to be a multiple of 2
-#define NF_MAXIMUM 10000.0 // Placeholder Value. TODO: Update based on histograms of actual values and sensitivity.
-
-typedef enum {
-    HALF_TRANSFER,
-    FULL_TRANSFER
-    } DMA_status;
-
-
-// Struct to hold the ADC DMA pingpong buffers
-typedef struct {
-    int32_t bufA[FFT_BUFFER_SIZE];
-    int32_t bufB[FFT_BUFFER_SIZE];
-    int32_t sample_buffer[FFT_BUFFER_SIZE];
-    bool isA;
-} pingpong_buffers_t;
-
-typedef struct {
-    float32_t window_lut[FFT_BUFFER_SIZE];
-    arm_rfft_fast_instance_f32 fft;
-    int32_t num_sub_nf_threshold;
-    int32_t num_total_tests;
-    float32_t oae_accumulator;
-} oae_data_t;
+#include "oae_algorithm.h"
 
 oae_data_t* setup_oae_data(){
     oae_data_t *oae_data_ptr = (oae_data_t*)malloc(sizeof(oae_data_t));
@@ -35,7 +14,7 @@ oae_data_t* setup_oae_data(){
     #if FFT_BUFFER_SIZE != 2048
         #error Currently is only able to deal with 2048 sized fft buffer
     #endif
-    arm_cfft_init_4096_f32(&(oae_data_ptr->fft));
+    arm_cfft_init_2048_f32(&(oae_data_ptr->fft));
     oae_data_ptr->num_sub_nf_threshold = 0;
     oae_data_ptr->oae_accumulator = 0;
     arm_hamming_f32(&(oae_data_ptr->window_lut), FFT_BUFFER_SIZE);
@@ -48,30 +27,35 @@ void oae_algorithm(oae_data_t *oae_data, const int32_t* sample_buffer) {
 
     static float32_t fft_output[FFT_BUFFER_SIZE*2];
     float32_t * fft_output_abs = converted_buffer;
+    float32_t * fft_output_dB = converted_buffer;
     float32_t average_noise_floor;
 
-    ADCout_to_float32(sample_buffer, converted_buffer, FFT_BUFFER_SIZE);
+    ADCbuff_to_float32(sample_buffer, converted_buffer, FFT_BUFFER_SIZE);
 
     arm_mult_f32(oae_data->window_lut, converted_buffer, windowed_buffer, FFT_BUFFER_SIZE);
     
     
-    arm_rfft_fast_f32(&(oae_data->fft),converted_buffer, fft_output, 0);
+    arm_rfft_fast_f32(&(oae_data->fft), converted_buffer, fft_output, 0);
     
     // Convert to fft magnitudes
     arm_cmplx_mag_f32(fft_output, fft_output_abs, FFT_BUFFER_SIZE);
+    // Convert to dB. This is sort of a worst case scenario since this is performing log on the entire set of samples
+    arm_vlog_f32(fft_output_abs, fft_output_dB, FFT_BUFFER_SIZE);
+    arm_scale_f32(fft_output_dB, SCALE_DB, fft_output_dB, FFT_BUFFER_SIZE);
 
     // There will be a more elegant way to execute this
     for (int i = 5; i<NUM_NF_VALS/2; i++) {
-        average_noise_floor = fft_output_abs[FFT_OAE_IDX + i];
+        average_noise_floor = fft_output_dB[FFT_OAE_IDX + i];
     }
     for (int i = -NUM_NF_VALS/2-5; i< (-NUM_NF_VALS/2); i++) {
-        average_noise_floor = fft_output_abs[FFT_OAE_IDX + i];
+        average_noise_floor = fft_output_dB[FFT_OAE_IDX + i];
     }
 
     if (average_noise_floor > NF_MAXIMUM) {
         exit();
     } else {
         oae_data->oae_accumulator += fft_output_abs[FFT_OAE_IDX];
+        oae_data->nf_accumulator += average_noise_floor;
         oae_data->num_sub_nf_threshold += 1;
     }
 }
