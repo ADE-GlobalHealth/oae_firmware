@@ -13,9 +13,8 @@
 #include <stdbool.h>
 
 
-
 #define FFT_BUFFER_SIZE 2048
-#define FFT_OAE_IDX 122
+#define FFT_OAE_IDX 122 // Do change to proper value of current oae signal
 #define NUM_NF_VALS 3*2 // Has to be a multiple of 2
 #define NF_MAXIMUM 10000.0 // Placeholder Value. TODO: Update based on histograms of actual values and sensitivity.
 #define SCALE_DB 8.685889638 // Scale to the natural log of the magnitude required to obtain decibels.
@@ -46,7 +45,7 @@ typedef struct {
 
 oae_data_t* setup_oae_data(void);
 
-void oae_algorithm(oae_data_t *oae_data, const int32_t* sample_buffer);
+void oae_algorithm(oae_data_t *oae_data, int32_t* sample_buffer);
 
 float32_t convert_ADCout_to_float32(int32_t adc_value);
 

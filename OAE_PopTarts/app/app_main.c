@@ -10,6 +10,7 @@
 // #include "TLV320ADC3120.h"
 #include <arm_math.h>
 #include "dual_dma.h"
+#include "oae_algorithm.h"
 
 #define NS  4096
 #define n_data 1000
@@ -50,8 +51,8 @@ uint32_t Wave_LUT2[NS] = {
 };
 
 
-volatile uint16_t data_i2s[4096];
-volatile uint16_t data_i2s_2[4096];
+volatile uint32_t data_i2s[2048];
+//volatile uint16_t data_i2s_2[2048];
 uint8_t first_time = 1;
 // TLV320ADC3120 dev;
 
@@ -224,7 +225,7 @@ void end_adc(){
 int fft_cycles = 10; //must be even to start with
 
 float32_t fft_output[10+1]; //would be length of fft_cycles +1 for inital 
-
+/*
 void fft(){
 	int* current_buffer = fft_cycles % 2 == 0 ? data_i2s : data_i2s_2;
 	int* next_buffer = fft_cycles % 2 == 0 ? data_i2s_2 : data_i2s;
@@ -254,6 +255,8 @@ void fft(){
 	}
 }
 
+*/
+
 
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
 	uint16_t a = 1;
@@ -270,6 +273,8 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
 
 uint32_t blink_time = 0;
 
+oae_data_t* oae_data;
+
 void app_setup(){
 	for (int i = 0; i < NS; i++) {
 			  //for dual right alignment (page 624 of reference manual)
@@ -282,10 +287,12 @@ void app_setup(){
 	init_adc_2();
 	// TLV320ADC3120_Initialize(&dev, &hi2c3);
 	// uint8_t status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
-	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, 4096);
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, 2048);
 	
 	// status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 	blink_time = HAL_GetTick();
+
+	oae_data = setup_oae_data();
 }
 
 
@@ -296,7 +303,13 @@ bool endflag = false;
 void app_loop(){
 //	w(0x12,0x02,0x00);
 	// // DO not use HAL_Delay -> generates an interrupt that halts DMA channels
-    time = HAL_GetTick();
+    //time = HAL_GetTick();
+
+	HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+	oae_algorithm(oae_data, data_i2s);
+	HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+
+/*
     if ((time - blink_time) > 10000) {
 		uint16_t b = 1;
         // HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
@@ -304,7 +317,7 @@ void app_loop(){
         // blink_time = time;
 		// counter++;
 		//w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
-    }
+    }*/
 	// if (counter == 200 && endflag == false){
 	// 	// end_adc();
 	// 	endflag = true;
