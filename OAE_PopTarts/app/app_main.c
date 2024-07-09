@@ -257,9 +257,9 @@ void fft(){
 
 */
 
-
+uint16_t algorithm_run = 0;
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
-	uint16_t a = 1;
+	algorithm_run = 1;
 	// if(first_time) {
 	// 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s_2, sizeof(data_i2s_2));
 	// 	first_time = 0;
@@ -272,8 +272,8 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai){
 
 
 uint32_t blink_time = 0;
-
-oae_data_t* oae_data;
+oae_data_t oae_data_mem;
+oae_data_t* oae_data = &oae_data_mem;
 
 void app_setup(){
 	for (int i = 0; i < NS; i++) {
@@ -292,7 +292,10 @@ void app_setup(){
 	// status = HAL_GPIO_ReadPin(ADC_Interupt_GPIO_Port,ADC_Interupt_Pin);
 	blink_time = HAL_GetTick();
 
-	oae_data = setup_oae_data();
+	arm_rfft_fast_init_f32(&(oae_data->fft), 2048);
+    oae_data->num_sub_nf_threshold = 0;
+    oae_data->oae_accumulator = 0;
+    arm_hamming_f32(oae_data->window_lut, FFT_BUFFER_SIZE);
 }
 
 
@@ -304,10 +307,14 @@ void app_loop(){
 //	w(0x12,0x02,0x00);
 	// // DO not use HAL_Delay -> generates an interrupt that halts DMA channels
     //time = HAL_GetTick();
+	if (algorithm_run)	{
+		HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		oae_algorithm(oae_data, data_i2s);
+		HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		algorithm_run = 0;
+		HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, 2048);
+	}
 
-	HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-	oae_algorithm(oae_data, data_i2s);
-	HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 
 /*
     if ((time - blink_time) > 10000) {
