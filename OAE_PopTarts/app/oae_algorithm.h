@@ -14,18 +14,21 @@
 
 
 #define FFT_BUFFER_SIZE 2048
-#define FFT_OAE_IDX 122 // Do change to proper value of current oae signal
+#define FFT_OAE_IDX 122 // Do change to proper index value of current oae signal. This is the array index we expect to see the OAE.
 #define NUM_NF_VALS 3*2 // Has to be a multiple of 2
 #define NF_MAXIMUM 10000.0 // Placeholder Value. TODO: Update based on histograms of actual values and sensitivity.
 #define SCALE_DB 8.685889638 // Scale to the natural log of the magnitude required to obtain decibels.
 
+
+// Currently unused datatype of different DMA transfer statuses
 typedef enum {
     HALF_TRANSFER,
     FULL_TRANSFER
     } DMA_status;
 
 
-// Struct to hold the ADC DMA pingpong buffers
+// Struct to hold the ADC DMA pingpong buffers.
+// Currently unused.
 typedef struct {
     int32_t bufA[FFT_BUFFER_SIZE];
     int32_t bufB[FFT_BUFFER_SIZE];
@@ -33,6 +36,9 @@ typedef struct {
     bool isA;
 } pingpong_buffers_t;
 
+
+// Struct for holding values needed for the oae algorithm
+// Used for tracking the results of the algorithm as it runs many times.
 typedef struct {
     float32_t window_lut[FFT_BUFFER_SIZE];
     arm_rfft_fast_instance_f32 fft;
