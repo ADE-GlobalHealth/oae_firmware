@@ -12,6 +12,13 @@
 #include <stdbool.h>
 
 oae_data_t* setup_oae_data(){
+    /* Creates a struct that holds the necessary overhead for the fft and
+    windowing, as well as initializing the struct's values for test results.
+    In practice it may make sense to not use this function and just do all of
+    this setup in the setup function in app_main, for example done in the
+    algorithm-profiling branch. The reason why this might be advantageous
+    is that the large arrays end up on the stack instead of the heap.
+    */
     oae_data_t* oae_data = (oae_data_t*) malloc(sizeof(oae_data_t));
 
     #if FFT_BUFFER_SIZE != 2048
@@ -25,6 +32,12 @@ oae_data_t* setup_oae_data(){
 }
 
 void oae_algorithm(oae_data_t *oae_data, int32_t* sample_buffer) {
+    /*
+        Identify the presence and relative loudness of the oae response in
+        a small recorded segment contained 
+    */
+    
+    // Allocate buffers that will be used for multiple purposes.
     static float32_t windowed_buffer[FFT_BUFFER_SIZE];
     static float32_t fft_output[FFT_BUFFER_SIZE];
     float32_t * converted_buffer = fft_output;
@@ -33,6 +46,7 @@ void oae_algorithm(oae_data_t *oae_data, int32_t* sample_buffer) {
     float32_t * fft_output_dB = fft_output;
     float32_t average_noise_floor;
 
+    
     ADCbuff_to_float32(sample_buffer, converted_buffer, FFT_BUFFER_SIZE);
 
     arm_mult_f32(oae_data->window_lut, converted_buffer, windowed_buffer, FFT_BUFFER_SIZE);
@@ -70,16 +84,18 @@ float32_t convert_ADCout_to_float32(int32_t adc_value) {
 
 
 void ADCbuff_to_float32(int32_t* pSrc, float32_t* pDst, uint32_t numSamples) {
+    // Performs the conversion used above. I am skeptical about this conversion, especially
+    // since a different conversion is used in commented out code from a while ago. Do not trust
+    // this method!
     for (int i = 0; i < numSamples; i++){
         pDst[i] = pSrc[i] >> 8;
     }
 
 }
 
-//void interpolate_error_samples()
-
 void switch_pingpong_buffer(pingpong_buffers_t * bufs, int32_t ** DMA_addr){
     // Switch the pingpong buffer
+    // Currently unused
     if(bufs->isA){
         *DMA_addr = bufs->bufB;
     } else {
@@ -90,6 +106,8 @@ void switch_pingpong_buffer(pingpong_buffers_t * bufs, int32_t ** DMA_addr){
 
 
 void ADC_half_transfer(pingpong_buffers_t * bufs){
+    // Used for half window overlap if using pinpong buffers. Called when the DMA is 
+    // halfway through writing ADC values to the buffer.
     // Expects that bufA and bufB are the length of a full fft buffer (FFT_BUFFER_SIZE)
     // Sample buffer is the output.
     if (bufs->isA)   {
@@ -104,7 +122,9 @@ void ADC_half_transfer(pingpong_buffers_t * bufs){
 
 
 void ADC_full_transfer(pingpong_buffers_t * bufs, int32_t ** DMA_addr){
-    // Gets called when
+    // Used if using pinpong buffers to copy a volatile buffer to a buffer that
+    // will stay constant for signal processing.
+    // Gets called when the DMA is done writing ADC values to the buffer.
     // Expects that bufA and bufB are the length of a full fft buffer (FFT_BUFFER_SIZE)
     // Sample buffer is the output.
     if (bufs->isA) {
