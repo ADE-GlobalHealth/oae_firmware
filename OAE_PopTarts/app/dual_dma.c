@@ -10,6 +10,8 @@
 // See: https://community.st.com/t5/stm32-mcu-products/can-stm32cube-configure-the-dac-in-synchronous-dual-mode-with/td-p/469433
 // And: https://community.st.com/t5/stm32-mcu-products/how-to-use-two-dac-channels-simultaneously/td-p/210588
 
+// Reference Manual ~pg618: https://www.st.com/resource/en/reference_manual/rm0351-stm32l47xxx-stm32l48xxx-stm32l49xxx-and-stm32l4axxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+
 /*
 Configuration prerequisites:
 1. Set both outputs of DAC1 to external pin
@@ -18,16 +20,19 @@ Configuration prerequisites:
 4. Configure the DMA for word lenght data for both peripheral and memory,
   set increment on memory only, and set buffer to circular mode.
 */
-HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
-  DAC_HandleTypeDef * hdac, uint32_t Channel, uint32_t * pData, uint32_t Length, uint32_t Alignment) {
+HAL_StatusTypeDef HAL_DAC_Start_DualDMA(DAC_HandleTypeDef * hdac, uint32_t Channel, uint32_t * pData, uint32_t Length, uint32_t Alignment) {
   uint32_t tmpreg = 0;
+
   /* Check the parameters */
   assert_param(IS_DAC_CHANNEL_INSTANCE(hdac -> Instance, Channel));
   assert_param(IS_DAC_ALIGN(Alignment));
+
   /* Process locked */
   __HAL_LOCK(hdac);
+
   /* Change DAC state */
   hdac -> State = HAL_DAC_STATE_BUSY;
+
   if (Channel == DAC_CHANNEL_1) {
     /* Set the DMA transfer complete callback for channel1 */
     hdac -> DMA_Handle1 -> XferCpltCallback = DAC_DMAConvCpltCh1;
@@ -84,6 +89,7 @@ HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
     hdac -> DMA_Handle1 -> XferErrorCallback = DAC_DMAErrorCh1;
     /* Enable the selected DAC channel1 DMA request */
     SET_BIT(hdac -> Instance -> CR, DAC_CR_DMAEN1);
+
     /* Case of use of channel 1+2 - dual mode */
     switch (Alignment) {
     case DAC_ALIGN_12B_R:
@@ -98,13 +104,22 @@ HAL_StatusTypeDef HAL_DAC_Start_DualDMA(
     default:
       break;
     }
-  } /* Enable the DMA Channel */ /* Reversed for dual-channel operation by JG @ Det3 */
+  } 
+  
+  /* Enable the DMA Channel */ /* Reversed for dual-channel operation by JG @ Det3 */
   if (Channel == DAC_CHANNEL_2) {
     /* Enable the DAC DMA underrun interrupt */
     __HAL_DAC_ENABLE_IT(hdac, DAC_IT_DMAUDR2);
     /* Enable the DMA Channel */
     HAL_DMA_Start_IT(hdac -> DMA_Handle2, (uint32_t) pData, tmpreg, Length);
-  } else {
+  } else if (Channel == DAC_CHANNEL_1) {
+    /* Enable the DAC DMA underrun interrupt */
+    __HAL_DAC_ENABLE_IT(hdac, DAC_IT_DMAUDR1);
+    /* Enable the DMA Channel */
+    HAL_DMA_Start_IT(hdac -> DMA_Handle1, (uint32_t) pData, tmpreg, Length);
+  }
+  else {
+    // Dual channel
     /* Enable the DAC DMA underrun interrupt */
     __HAL_DAC_ENABLE_IT(hdac, DAC_IT_DMAUDR1);
     /* Enable the DMA Channel */
