@@ -102,10 +102,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-//  MX_DMA_Init();
-//  MX_DAC1_Init();
-//  MX_TIM6_Init();
-//  MX_I2C3_Init();
+  MX_DMA_Init();
+  MX_DAC1_Init();
+  MX_TIM6_Init();
+  MX_I2C3_Init();
 //  MX_SAI2_Init();
   /* USER CODE BEGIN 2 */
   app_setup();
@@ -434,6 +434,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	  HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
   }
   /* USER CODE END Error_Handler_Debug */
 }

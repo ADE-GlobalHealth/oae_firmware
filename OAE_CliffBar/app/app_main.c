@@ -129,19 +129,20 @@ void end_adc(){
  * of the runtime.
 */
 void app_setup() {
-//	// Start DMA for the DACs
-//	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, LUT_SIZE, DAC_ALIGN_12B_R);
-//	// Start Timer for the DACs
-//	HAL_TIM_Base_Start(&htim6);
-//
-//	// Initialize ADC through I2C
-//	init_adc();
-//
-//	// Start DMA channel for receiving data from mic
-//	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, BUFFER_SIZE);
+	// Start DMA for the DACs
+	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*)Wave_LUT, LUT_SIZE, DAC_ALIGN_12B_R);
+	// Start Timer for the DACs
+	HAL_TIM_Base_Start(&htim6);
+
+	// Initialize ADC through I2C
+	init_adc();
+
+	// Start DMA channel for receiving data from mic
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, BUFFER_SIZE);
 }
 
 uint32_t time = 0;
+uint32_t blink_time = 0;
 // bool CheckButtonState(GPIO_TypeDef* port,GPIO_TypeDef* pin, unsigned long time);
 uint8_t counter = 0;
 bool endflag = false;
@@ -152,10 +153,13 @@ void app_loop(){
 	// The code below isn't currently being used but might be useful to reference
 	// in the future
 
-//     time = HAL_GetTick();
-//	 HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-//	 HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
-//	 blink_time = time;
+     time = HAL_GetTick();
+     if (time - blink_time > 1000)
+     {
+		 HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		 HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
+		 blink_time = time;
+     }
 //	 counter++;
 //	 w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
 //
@@ -166,8 +170,8 @@ void app_loop(){
 //     // if (CheckButtonState(SW1_GPIO_Port,SW1_Pin,time)){
 //     // 	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
 //     // }
-	 HAL_Delay(1000);
-	 HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
+//	 HAL_Delay(1000);
+//	 HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
 }
 
 
