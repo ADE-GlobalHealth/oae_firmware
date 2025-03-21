@@ -145,7 +145,7 @@ HAL_TickFreqTypeDef uwTickFreq = HAL_TICK_FREQ_DEFAULT;  /* 1KHz */
   *         The Systick configuration is based on MSI clock, as MSI is the clock
   *         used after a system Reset and the NVIC configuration is set to Priority group 4.
   *         Once done, time base tick starts incrementing: the tick variable counter is incremented
-//  *         each 1ms in the SysTick_Handler() interrupt handler.
+  *         each 1ms in the SysTick_Handler() interrupt handler.
   *
   * @retval HAL status
   */
