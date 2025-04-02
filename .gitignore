@@ -52,6 +52,7 @@ _deps
 Debug
 Release
 build/
+tools/logs/
 
 # VS Code Generated files
 */CMakePresets.json
