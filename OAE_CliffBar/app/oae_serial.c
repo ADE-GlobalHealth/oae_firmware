@@ -31,6 +31,19 @@ void oae_serial_init(void)
 	oae_fill_adc_buffer(ADC_Buffer);
 }
 
+bool oae_start_command(uint8_t command_num)
+{
+	// add start commands here
+	return true;
+}
+
+bool oae_stop_command(uint8_t command_num)
+{
+	// add stop commands here
+	return true;
+}
+
+// Fill the ADC buffer with test data:
 void oae_fill_adc_buffer(uint32_t *ADCBuf)
 {
 	int SampleCount;
@@ -41,28 +54,45 @@ void oae_fill_adc_buffer(uint32_t *ADCBuf)
 		for (SampleCount = 0; SampleCount < ADC_SAMPLES_PER_PACKET; SampleCount++) {
 
 			// Create 24 bit test data with the packet number in the upper 8 bits:
-			ADCBuf[i++] = (PacketCount << 16) | (SampleCount & 0xFFFF);
+			ADCBuf[i] = (PacketCount << 16) | (i & 0xFFFF);
+			i++;
 		}
 	}
 }
 
-// Fills a packet payload buffer with 24 bit ADC data.
+// Fills a packet payload buffer with 24 bit ADC test data.
 // The function returns the number of bytes in the payload
 uint32_t oae_fill_adc_data_payload(uint32_t ADCBuf_starting_index, uint32_t *ADCBuf, uint32_t num_samples, uint8_t *payload_buf)
 {
-	int bytes_per_sample = 3;
 	uint32_t sample;
 
-	if ((num_samples * bytes_per_sample) > SER_MAX_PAYLOAD_LEN) return 0;	// Size error!
+	if ((num_samples * ADC_BYTES_PER_SAMPLE) > SER_MAX_PAYLOAD_LEN) return 0;	// Size error!
 
 	for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
 
 		sample = ADCBuf[ADCBuf_starting_index + SampleCount];
-		payload_buf[SampleCount * bytes_per_sample + 0] = (sample >> 16) & 0xFF;
-		payload_buf[SampleCount * bytes_per_sample + 1] = (sample >> 8) & 0xFF;
-		payload_buf[SampleCount * bytes_per_sample + 2] = (sample) & 0xFF;
+		payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 0] = (sample >> 16) & 0xFF;
+		payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 1] = (sample >> 8) & 0xFF;
+		payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 2] = (sample) & 0xFF;
 	}
-	return (num_samples * bytes_per_sample);
+	return (num_samples * ADC_BYTES_PER_SAMPLE);
+}
+
+// Copy one packet of received ADC data into the specified ADCBuf
+uint32_t oae_receive_adc_data_payload(uint32_t ADCBuf_starting_index, uint32_t *ADCBuf, uint32_t num_samples, uint8_t *payload_buf)
+{
+	uint32_t sample;
+
+	if ((ADCBuf_starting_index + num_samples) > ADC_BUFFER_SIZE) return 0;	// Size error!
+
+	for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
+
+		sample = (payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 0] << 16);
+		sample |= (payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 1] << 8);
+		sample |= payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 2];
+		ADCBuf[ADCBuf_starting_index + SampleCount] = sample;
+	}
+	return (num_samples * ADC_BYTES_PER_SAMPLE);
 }
 
 // This creates a transmit packet and blocks until the data has finished sending.
@@ -174,7 +204,7 @@ bool oae_serial_receive(uint8_t rx_char)
 
 void oae_process_rx_packet(void)
 {
-	//static int	StatusCount = 0;
+	static int	cmd_adc_buf_packet_count = 0;
 	uint8_t		TxBuffer[APP_RX_DATA_SIZE];
 	int 		buf_len;
 
@@ -183,9 +213,27 @@ void oae_process_rx_packet(void)
 	switch(RxPacket.command)
 	{
 		case CMD_PING:
-		    oae_serial_send(RSP_PING, 0, (uint8_t *) TxBuffer);
-			SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
-
+			oae_serial_send(RSP_PING, 0, (uint8_t *) TxBuffer);
+			break;
+		case CMD_START:
+			if (RxPacket.payload_size != 1) {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			else {
+				oae_start_command(RxPacket.payload[0]);
+				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+			}
+			break;
+		case CMD_STOP:
+			if (RxPacket.payload_size != 1) {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			else {
+				oae_stop_command(RxPacket.payload[0]);
+				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+			}
 			break;
 		case CMD_STATUS:
 			buf_len = sprintf((char *)TxBuffer, "OAE_SERIAL_PROTOCOL_VERSION: %s command_turnaround_time: %d tx_packet_count: %d tx_packet_err_count: %d", OAE_SERIAL_PROTOCOL_VERSION, SerStats.command_turnaround_time, SerStats.tx_packet_count, SerStats.tx_packet_err_count);
@@ -194,25 +242,64 @@ void oae_process_rx_packet(void)
   	        SerStats.tx_packet_count = 0;
   	        SerStats.tx_packet_err_count = 0;
 		    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
-			SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
 		    break;
 		case CMD_ADC_BUF_REQ:
 
-			buf_len = oae_fill_adc_data_payload(0, ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
-		    oae_serial_send(RSP_ADC_BUF_START, buf_len, (uint8_t *) TxBuffer);
-		    for (int i=1;i<ADC_PACKETS_PER_BUFFER-1;i++) {
-				buf_len = oae_fill_adc_data_payload(i*ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
-			    oae_serial_send(RSP_ADC_BUF, buf_len, (uint8_t *) TxBuffer);
-		    }
-			buf_len = oae_fill_adc_data_payload(ADC_SAMPLES_PER_PACKET*(ADC_PACKETS_PER_BUFFER-1), ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
-		    oae_serial_send(RSP_ADC_BUF_END, buf_len, (uint8_t *) TxBuffer);
-			SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
+			if (RxPacket.payload_size != 1) {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			else {
+				if (RxPacket.payload[0] == 0) {
+					oae_fill_adc_buffer(ADC_Buffer);		// send back test data, otherwise send back the current contents of the buffer
+				}
+
+				buf_len = oae_fill_adc_data_payload(0, ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
+				oae_serial_send(RSP_ADC_BUF_START, buf_len, (uint8_t *) TxBuffer);
+				for (int i=1;i<ADC_PACKETS_PER_BUFFER-1;i++) {
+					buf_len = oae_fill_adc_data_payload(i*ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
+					oae_serial_send(RSP_ADC_BUF, buf_len, (uint8_t *) TxBuffer);
+				}
+				buf_len = oae_fill_adc_data_payload(ADC_SAMPLES_PER_PACKET*(ADC_PACKETS_PER_BUFFER-1), ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
+				oae_serial_send(RSP_ADC_BUF_END, buf_len, (uint8_t *) TxBuffer);
+			}
+			break;
+
+		case CMD_ADC_BUF_START:
+			cmd_adc_buf_packet_count = 0;
+			if (RxPacket.payload_size == ADC_SAMPLES_PER_PACKET * ADC_BYTES_PER_SAMPLE) {
+				oae_receive_adc_data_payload(cmd_adc_buf_packet_count * ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, RxPacket.payload);
+				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+			} else {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			break;
+		case CMD_ADC_BUF:
+			if (RxPacket.payload_size == ADC_SAMPLES_PER_PACKET * ADC_BYTES_PER_SAMPLE) {
+				cmd_adc_buf_packet_count++;
+				oae_receive_adc_data_payload(cmd_adc_buf_packet_count * ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, RxPacket.payload);
+				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+			} else {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			break;
+		case CMD_ADC_BUF_END:
+			if (RxPacket.payload_size == ADC_SAMPLES_PER_PACKET * ADC_BYTES_PER_SAMPLE) {
+				cmd_adc_buf_packet_count++;
+				oae_receive_adc_data_payload(63 * ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, RxPacket.payload);
+				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+			} else {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
 			break;
 		default:
 		    oae_serial_send(RSP_INVALID, 0, (uint8_t *) TxBuffer);
-			SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
 			break;
 	}
+	SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
 
 }
 

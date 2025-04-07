@@ -16,38 +16,48 @@
 #   Byte N: checksum (sum of all bytes, truncated to 8 bits)
 #
 #
+
 import sys
 import threading
 import os
 import datetime
 import time
+from time import sleep
 import serial
 import serial.tools.list_ports as port_list
 import numpy as np
 
-VERSION = "v1.1"
+OAE_SERIAL_PROTOCOL_VERSION = "v1.2"
 
 PACKET_HEADER_BYTE = 0x7E
-CMD_NOP     = 0
-CMD_PING    = 1
-CMD_STATUS  = 2
-CMD_ADC_BUF_REQ 	= 3
-CMD_ADC_BUF_START 	= 4
-CMD_ADC_BUF 		= 5
-CMD_ADC_BUF_END		= 6
-CMD_OK              = 7
 
-RSP_PING    = 101
-RSP_ACK     = 102
-RSP_NAK     = 103
-RSP_ERR     = 104
-RSP_TEXT    = 105
-RSP_ADC_BUF_START 	= 106
-RSP_ADC_BUF 		= 107
-RSP_ADC_BUF_END		= 108
-RSP_U8 		        = 109
-RSP_U32 			= 110
-RSP_INVALID 		= 111
+# Host commands:
+CMD_NOP             = 0     # No payload, no response expected
+CMD_PING            = 1     # Ping, no payload, RSP_PING response expected
+CMD_STATUS          = 2     # Request status from OAE, no payload, multiple RSP_TEXT responses expected
+CMD_ADC_BUF_REQ 	= 3     # Payload: 1 byte: U8, Request ADC buffer # from OAE
+CMD_ADC_BUF_START 	= 4     # Payload: 192 bytes: (64) 24 bit ADC samples (the first packet of 64 ADC samples), RSP_ACK or RSP_ERR response expected
+CMD_ADC_BUF 		= 5     # Payload: 192 bytes: (64) 24 bit ADC samples (packet of 64 ADC samples), no response expected (there will be 62 of these 
+CMD_ADC_BUF_END		= 6     # Payload: 192 bytes: (64) 24 bit ADC samples (the final packet of 64 ADC samples), RSP_ACK or RSP_ERR response expected
+CMD_I2C_RD		 	= 7	    # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
+CMD_I2C_WR			= 8     # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
+CMD_START			= 9     # Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
+CMD_STOP			= 10    # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
+CMD_OK              = 11    # No payload
+
+# OAE Embedded device responses:
+RSP_PING            = 101   # Ping response, no payload
+RSP_ACK             = 102   # No payload
+RSP_NAK             = 103   # No payload
+RSP_ERR             = 104   # Payload: Up to 250 bytes, text string
+RSP_TEXT            = 105   # Payload: Up to 250 bytes, text string
+RSP_ADC_BUF_START 	= 106   # Payload: 192 bytes: (64) 24 bit ADC samples (the first packet of 64 ADC samples)
+RSP_ADC_BUF 		= 107   # Payload: 192 bytes: (64) 24 bit ADC samples (packet of 64 ADC samples, there will be 62 of these packets in a 4096 sample
+RSP_ADC_BUF_END		= 108   # Payload: 192 bytes: (64) 24 bit ADC samples (the final packet of 64 ADC samples)
+RSP_U8 		        = 109   # Payload: 1 byte:  U8
+RSP_U32 			= 110   # Payload: 4 bytes: U32
+RSP_EVENT			= 111   # Payload: 1 byte:  U8 (event number)
+RSP_INVALID 		= 112   # No payload (Command from host was not recognized)
 
 class oae_serial_host:
     RxQ = []
@@ -59,9 +69,12 @@ class oae_serial_host:
     RxPacketIndex = 0
     RxPayloadSize = 0
     RxCommand = 0
+    CurrentTxCommand = CMD_NOP
+    TxCommandsActive = 0
     RxChecksum = 0
     ValidRXPacket = False
-    StartTime = 0
+    RxAudioBufferStartTime = 0
+    TxAudioBufferStartTime = 0
     CmdTime = 0
     RspTime = 0
     ADC_PacketCount = 0
@@ -75,12 +88,12 @@ class oae_serial_host:
     
     AudioBytesPerSample = 3     # store audio samples as 24 bit unsigned
     AudioSamplesPerPacket = 64
+    AudioSamplesPerBuffer = 4096
 
     def __init__(self, comport):
         self.logfile_open = False
         self.ConsolePrint = True
         self.open_logfile()
-        self.StartTime = time.perf_counter()
 
         if "COM" in comport:        # Windows
             self.isSerial = True
@@ -128,8 +141,11 @@ class oae_serial_host:
             t2 = sampleText + '\n'
 
             f.write(t2)
-            if i < 10:
-                self.writeLog(f"\t{i}: {sampleText}")
+            if False:
+                if i < 10:
+                    self.writeLog(f"\t{i}: {sampleText}")
+                elif i > 4090:
+                    self.writeLog(f"\t{i}: {sampleText}")
         f.close()
         
 
@@ -186,6 +202,16 @@ class oae_serial_host:
             return "CMD_ADC_BUF_START"
         elif command == CMD_ADC_BUF:
             return "CMD_ADC_BUF"
+        elif command == CMD_ADC_BUF_END:
+            return "CMD_ADC_BUF_END"
+        elif command == CMD_I2C_RD:
+            return "CMD_I2C_RD"
+        elif command == CMD_I2C_WR:
+            return "CMD_I2C_WR"
+        elif command == CMD_START:
+            return "CMD_START"
+        elif command == CMD_STOP:
+            return "CMD_STOP"
         elif command == CMD_OK:
             return "CMD_OK"
         elif command == RSP_PING:
@@ -202,6 +228,8 @@ class oae_serial_host:
             return "RSP_U8"
         elif command == RSP_U32:
             return "RSP_U32"
+        elif command == RSP_EVENT:
+            return "RSP_EVENT"
         elif command == RSP_ADC_BUF_START:
             return "RSP_ADC_BUF_START"
         elif command == RSP_ADC_BUF:
@@ -278,7 +306,6 @@ class oae_serial_host:
 
     def process_rx_response(self):
         self.RspTime = time.perf_counter()
-        self.GlobalTime = int((self.RspTime - self.StartTime) * 1e6)
         self.RoundTripTime = int((self.RspTime - self.CmdTime) * 1e6)
 
         if self.RxPayloadSize > 0:
@@ -291,9 +318,16 @@ class oae_serial_host:
                     self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
                 self.RxDataValid = True
                 if self.RxSilent == False:
-                    self.writeLog(f"\t{self.command_name(self.RxCommand)} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} ec")
+                    self.writeLog(f"\t{self.command_name(self.RxCommand)} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec")
+            elif self.RxCommand == RSP_U8:
+                Data = self.RxPayload_u8[0]
+                self.writeLog(f"\t{self.command_name(self.RxCommand)} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec")
+            elif self.RxCommand == RSP_EVENT:
+                EventNumber = self.RxPayload_u8[0]
+                self.writeLog(f"\t{self.command_name(self.RxCommand)} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec")
             elif self.RxCommand == RSP_ADC_BUF_START:
                 self.ADC_PacketCount = 1
+                self.RxAudioBufferStartTime = time.perf_counter()
                 self.RxAudioBuffer = []                
                 self.Audio_SamplesReceived = int(self.RxPayloadSize/self.AudioBytesPerSample)                    
                 if self.RxSilent == False:
@@ -314,7 +348,8 @@ class oae_serial_host:
                 self.Audio_TotalSamplesReceived += self.Audio_SamplesReceived
                 self.process_rx_audio_buffer_payload()
                 if self.RxSilent == False:
-                    self.writeLog(f"\t{self.command_name(self.RxCommand)} ADC_PacketCount: {self.ADC_PacketCount} # samples: {self.Audio_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec")
+                    elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
+                    self.writeLog(f"\t{self.command_name(self.RxCommand)} ADC_PacketCount: {self.ADC_PacketCount} # samples: {self.Audio_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec")
                     if False:       # debug packet timing
                         for i in range(len(self.RxPacketTimes)):
                             if i==0:
@@ -324,11 +359,18 @@ class oae_serial_host:
                 self.save_audio_buffer(self.RxAudioBuffer)
                         
             else:
+                if self.RxCommand == RSP_ERR:
+                    if self.TxCommandsActive > 0: self.TxCommandsActive -= 1
+                
                 payloadStr = ''.join(self.RxPayload)
                 self.writeLog(f"\t{self.command_name(self.RxCommand)} {payloadStr}")
                 self.writeLog(f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec")
         else:
-            self.writeLog(f"\t{self.command_name(self.RxCommand)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec ")
+            if self.RxCommand == RSP_ACK:
+                if self.TxCommandsActive > 0: self.TxCommandsActive -= 1
+                
+            if self.CurrentTxCommand != CMD_ADC_BUF:
+                self.writeLog(f"\t{self.command_name(self.RxCommand)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec ")
 
         self.ValidRXPacket = False
 
@@ -336,7 +378,9 @@ class oae_serial_host:
     def send_TxPacket(self, TxCommand, TxPayload):
         TxPacket = []
         Checksum = 0
-        self.writeLog(f"send_TxPacket: {self.command_name(TxCommand)}")
+        self.CurrentTxCommand = TxCommand
+        if TxCommand != CMD_ADC_BUF:
+            self.writeLog(f"send_TxPacket: {self.command_name(TxCommand)}")
         TxPacket.append(PACKET_HEADER_BYTE)
         Checksum += PACKET_HEADER_BYTE
         TxPacket.append(TxCommand)
@@ -346,30 +390,105 @@ class oae_serial_host:
         Checksum += PayloadSize
         if PayloadSize > 0:
             for p in TxPayload:
-                TxPacket.append(p)
-                Checksum += p
+                p_u8 = p & 0xFF
+                TxPacket.append(p_u8)
+                Checksum += p_u8
 
         Checksum = Checksum & 0xFF  # truncate to 8 bits
         TxPacket.append(Checksum)
         self.CmdTime = time.perf_counter()
         self.ser.write(TxPacket)
+                
+        
+    def upload_adc_packet(self, ADC_Buf_Command, TxAudioBuffer, SampleIndexOffset):
 
-    def command_response(self, command):
         TxPayload = []
-        if command == CMD_PING:
-            self.send_TxPacket(CMD_PING, TxPayload)
-        elif command == CMD_ADC_BUF_REQ:
+        sampleCount = 0
+        for i in range(self.AudioSamplesPerPacket):
+            sample = TxAudioBuffer[SampleIndexOffset + sampleCount]
+            sampleCount += 1
+            TxPayload.append((sample >> 16) & 0xFF)
+            TxPayload.append((sample >> 8) & 0xFF)
+            TxPayload.append(sample & 0xFF)
+            
+        self.send_TxPacket(ADC_Buf_Command, TxPayload)
+
+    def upload_adc_test_buffer(self):
+    
+        AudioPacketsPerBuffer =  int(self.AudioSamplesPerBuffer / self.AudioSamplesPerPacket)
+        TxAudioBuf = []
+        for i in range(AudioPacketsPerBuffer):
+            for j in range(self.AudioSamplesPerPacket):
+                TxAudioBuf.append((i & 0xFF) | ((i * self.AudioSamplesPerPacket + j) & 0xFFFF)<<8)
+
+        print(f"upload_adc_test_buffer AudioPacketsPerBuffer: {AudioPacketsPerBuffer} TxAudioBuf[4095]: {hex(TxAudioBuf[4095])}")
+        self.TxCommandsActive = 0
+            
+        SampleIndex = 0
+        TxAudioBufferStartTime = time.perf_counter()
+        self.writeLog(f"\tCMD_ADC_BUF_START time: {TxAudioBufferStartTime}")
+        self.upload_adc_packet(CMD_ADC_BUF_START, TxAudioBuf, SampleIndex)   
+        self.TxCommandsActive += 1
+        SampleIndex += self.AudioSamplesPerPacket
+
+        for i in range(AudioPacketsPerBuffer - 2):
+            while self.TxCommandsActive > 5:
+                elapsedTime = time.perf_counter() - TxAudioBufferStartTime
+                if elapsedTime > 2.0:
+                    self.writeLog(f"\tErr: CMD_ADC_BUF Timeout: {elapsedTime}")
+                    break
+                else:
+                    sleep(0.001)
+                
+            self.upload_adc_packet(CMD_ADC_BUF, TxAudioBuf, SampleIndex)   
+            self.TxCommandsActive += 1
+            SampleIndex += self.AudioSamplesPerPacket
+
+        while self.TxCommandsActive > 0:
+            elapsedTime = time.perf_counter() - TxAudioBufferStartTime
+            if elapsedTime > 2.0:
+                self.writeLog(f"\tErr: CMD_ADC_BUF Timeout: {elapsedTime}")
+                break
+            else:
+                sleep(0.001)
+            
+        self.upload_adc_packet(CMD_ADC_BUF_END, TxAudioBuf, SampleIndex)    
+        self.TxCommandsActive += 1
+        SampleIndex += self.AudioSamplesPerPacket
+
+        while self.TxCommandsActive > 0:
+            elapsedTime = time.perf_counter() - TxAudioBufferStartTime
+            if elapsedTime > 2.0:
+                self.writeLog(f"\tErr: CMD_ADC_BUF Timeout: {elapsedTime}")
+                break
+            else:
+                sleep(0.001)
+        
+        self.writeLog(f"\tCMD_ADC_BUF_END SampleIndex: {SampleIndex} elapsedTime: {elapsedTime}")
+
+    def command_response(self, command, TxPayload = None):
+        EmptyPayload = []
+        if command == CMD_ADC_BUF_REQ:
             self.RxPacketTimes = []
             self.send_TxPacket(CMD_ADC_BUF_REQ, TxPayload)
             self.writeLog(f"\tCMD_ADC_BUF_REQ time: {time.perf_counter()}")
-        elif command == CMD_STATUS:
-            self.send_TxPacket(CMD_STATUS, TxPayload)
+        elif command == CMD_ADC_BUF_START:
+            self.upload_adc_test_buffer()
+        else:
+            if TxPayload == None:
+                self.send_TxPacket(command, EmptyPayload)
+            else: 
+                self.send_TxPacket(command, TxPayload)
 
     def print_menu(self):
         self.writeLog("Menu: ")
         self.writeLog("\t1) \tCMD_PING ")
         self.writeLog("\t2) \tCMD_STATUS ")
-        self.writeLog("\t3) \tCMD_ADC_BUF_REQ ")
+        self.writeLog("\t3) \tCMD_ADC_BUF Upload (host test pattern)")
+        self.writeLog("\t4) \tCMD_ADC_BUF Request 0 (oae test pattern)")
+        self.writeLog("\t5) \tCMD_ADC_BUF Request 1 (current oae buffer)")
+        self.writeLog("\t6) \tCMD_START ")
+        self.writeLog("\t7) \tCMD_STOP ")
         self.writeLog("\t? or h) Print this menu")
         self.writeLog("\tq) \tQuit")
 
@@ -384,7 +503,27 @@ class oae_serial_host:
             elif user_input[0] == '2':
                 self.command_response(CMD_STATUS)
             elif user_input[0] == '3':
-                self.command_response(CMD_ADC_BUF_REQ)
+                self.command_response(CMD_ADC_BUF_START)
+            elif user_input[0] == '4':
+                BufferNum = 0
+                TxPayload = []
+                TxPayload.append(BufferNum)            
+                self.command_response(CMD_ADC_BUF_REQ, TxPayload)
+            elif user_input[0] == '5':
+                BufferNum = 1
+                TxPayload = []
+                TxPayload.append(BufferNum)            
+                self.command_response(CMD_ADC_BUF_REQ, TxPayload)
+            elif user_input[0] == '6':
+                CommandNum = 1
+                TxPayload = []
+                TxPayload.append(CommandNum)            
+                self.command_response(CMD_START, TxPayload)
+            elif user_input[0] == '7':
+                CommandNum = 0
+                TxPayload = []
+                TxPayload.append(CommandNum)            
+                self.command_response(CMD_STOP, TxPayload)
             elif user_input[0] == 'h':
                 self.print_menu()
             elif user_input[0] == '?':
@@ -396,11 +535,11 @@ class oae_serial_host:
 
 def main():
 
-    print(f"OAE serial host version: {VERSION}")
+    print(f"OAE serial protocol version: {OAE_SERIAL_PROTOCOL_VERSION}")
 
     if len(sys.argv) != 2:
         print("\tUsage: python -m oae_serial_host <COM Port>")
-        print("\tlog files are saved to the logs/ subdirectory.")
+        print("\tLog and adc data files are saved to the logs/ subdirectory.")
 
         ports = list(port_list.comports())
 
