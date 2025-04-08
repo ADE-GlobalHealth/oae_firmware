@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app_main.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -106,7 +106,7 @@ int main(void)
   MX_I2C3_Init();
   MX_SAI2_Init();
   /* USER CODE BEGIN 2 */
-
+  app_setup();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -116,6 +116,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	app_loop();
   }
   /* USER CODE END 3 */
 }
