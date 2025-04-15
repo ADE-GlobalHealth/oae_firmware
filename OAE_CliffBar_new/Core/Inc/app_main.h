@@ -1,7 +1,7 @@
 /*
  * User-defined application main functions for OAE device operation.
  *
- * Authors: Venkadesh Eswaranandam, Luke Nonas-Hunter
+ * Authors: Venkadesh Eswaranandam, Luke Nonas-Hunter, Drew Pang
  */
 
 /**

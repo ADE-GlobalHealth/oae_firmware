@@ -1,8 +1,9 @@
+//TODO: Format all files
+
 /*
- * app_main.c
+ * OAE device application main.
  *
- *  Created on: Sep 19, 2023
- *      Author: veswaranandam
+ * Authors: veswaranandam, Drew Pang
 // */
 //
 //#include "dual_dma.h"
