@@ -13,7 +13,6 @@
 // */
 //void app_loop(void);
 
-
 /*
  * app_core.h
  *
@@ -23,8 +22,8 @@
  *     Authors: Venkadesh Eswaranandam, Luke Nonas-Hunter
  */
 
-#ifndef INC_APP_CORE_H_
-#define INC_APP_CORE_H_
+//#ifndef INC_APP_MAIN_H_
+//#define INC_APP_MAIN_H_
 
 /* The setup function is run immediately before the main loop but after all of
  * the CubeMX auto-generated initialization code.
@@ -36,4 +35,4 @@ void app_setup(void);
 void app_loop(void);
 
 
-#endif /* INC_APP_CORE_H_ */
+//#endif /* INC_APP_MAIN_H_ */

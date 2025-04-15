@@ -7,12 +7,12 @@
 //
 //#include "dual_dma.h"
 //#include "tlv320adcx120_page0.h"
-#include <app_main.h>
+#include "app_main.h"
 //#include <arm_math.h>
 #include <main.h>
-//#include <stdbool.h>
-//#include <stm32l4xx_hal_dac.h>
-//#include <stm32l4xx_hal_sai.h>
+#include <stdbool.h>
+#include <stm32l4xx_hal_dac.h>
+#include <stm32l4xx_hal_sai.h>
 //
 //#define NS 4096
 //#define n_data 1000
@@ -150,7 +150,7 @@ void app_setup() {
 //  HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t *)Wave_LUT, LUT_SIZE,
 //                        DAC_ALIGN_12B_R);
 //  // Start Timer for the DACs
-//  HAL_TIM_Base_Start(&htim6);
+  HAL_TIM_Base_Start(&htim6);
 //
 //  // Initialize ADC through I2C
 //  init_adc();
