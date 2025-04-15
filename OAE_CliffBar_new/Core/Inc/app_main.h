@@ -1,38 +1,17 @@
-///*
-// * Contains all functions that must be defined by an application.
-// *
-// *     Authors: Venkadesh Eswaranandam, Luke Nonas-Hunter, Drew Pang
-// */
-//
-///* The setup function is run immediately before the main loop but after all of
-// * the CubeMX auto-generated initialization code.
-// */
-//void app_setup(void);
-//
-///* The loop function is the first function called in the main loop.
-// */
-//void app_loop(void);
-
 /*
- * app_core.h
+ * User-defined application main functions for OAE device operation.
  *
- * Contains all functions that must be defined by an application.
- *
- *  Created on: Jul 19, 2023
- *     Authors: Venkadesh Eswaranandam, Luke Nonas-Hunter
+ * Authors: Venkadesh Eswaranandam, Luke Nonas-Hunter
  */
 
-//#ifndef INC_APP_MAIN_H_
-//#define INC_APP_MAIN_H_
-
-/* The setup function is run immediately before the main loop but after all of
- * the CubeMX auto-generated initialization code.
+/**
+ * OAE device application setup to run after all CubeMX auto-generated
+ * initialization code but before the application loop.
  */
 void app_setup(void);
 
-/* The loop function is the first function called in the main loop.
+/*
+ * OAE device application main loop to run continuously after all system and
+ * OAE device specific initialization.
  */
 void app_loop(void);
-
-
-//#endif /* INC_APP_MAIN_H_ */
