@@ -104,6 +104,10 @@ void oae_process_rx_packet(void);
 
 int8_t RX_USB_CDC_Data(uint8_t* Buf, uint32_t *Len);
 
+// These functions are in app_main.c:
+void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2);
+void r(uint16_t devaddr, uint16_t memaddr, uint8_t* data);
+
 #define ERR_STR_INVALID_PAYLOAD_SIZE "ERR: payload_size invalid"
 
 #ifdef __cplusplus

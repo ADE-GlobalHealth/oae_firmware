@@ -9,6 +9,7 @@
  */
 
 #include "usbd_cdc_if.h"
+#include "main.h"
 #include "oae_serial.h"
 
 SerialStats_t SerStats;
@@ -295,6 +296,38 @@ void oae_process_rx_packet(void)
 			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
 			}
 			break;
+		case CMD_I2C_RD:
+			if (RxPacket.payload_size != 2) {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			else {
+				uint8_t i2c_devaddr = RxPacket.payload[0];
+				uint8_t i2c_regaddr = RxPacket.payload[1];
+
+				uint8_t i2c_rd_data;
+
+				r((uint16_t) i2c_devaddr, (uint16_t) i2c_regaddr, (uint8_t *) &i2c_rd_data);
+				TxBuffer[0] = i2c_rd_data;
+			    oae_serial_send(RSP_U8, 1, (uint8_t *) TxBuffer);
+			}
+			break;
+
+		case CMD_I2C_WR:
+			if (RxPacket.payload_size != 3) {
+				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+			}
+			else {
+				uint8_t i2c_devaddr = RxPacket.payload[0];
+				uint8_t i2c_regaddr = RxPacket.payload[1];
+				uint8_t i2c_wr_data = RxPacket.payload[2];
+
+				w((uint16_t) i2c_devaddr, (uint16_t) i2c_regaddr, i2c_wr_data);
+				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+			}
+			break;
+
 		default:
 		    oae_serial_send(RSP_INVALID, 0, (uint8_t *) TxBuffer);
 			break;

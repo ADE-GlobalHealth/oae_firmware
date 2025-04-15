@@ -466,6 +466,19 @@ class oae_serial_host:
         
         self.writeLog(f"\tCMD_ADC_BUF_END SampleIndex: {SampleIndex} elapsedTime: {elapsedTime}")
 
+    def i2c_rd(self, device_addr, device_register_addr):
+        TxPayload = []
+        TxPayload.append(device_addr)            
+        TxPayload.append(device_register_addr)            
+        self.send_TxPacket(CMD_I2C_RD, TxPayload)
+
+    def i2c_wr(self, device_addr, device_register_addr, i2c_wr_data):
+        TxPayload = []
+        TxPayload.append(device_addr)            
+        TxPayload.append(device_register_addr)            
+        TxPayload.append(i2c_wr_data)            
+        self.send_TxPacket(CMD_I2C_WR, TxPayload)
+
     def command_response(self, command, TxPayload = None):
         EmptyPayload = []
         if command == CMD_ADC_BUF_REQ:
@@ -489,6 +502,8 @@ class oae_serial_host:
         self.writeLog("\t5) \tCMD_ADC_BUF Request 1 (current oae buffer)")
         self.writeLog("\t6) \tCMD_START ")
         self.writeLog("\t7) \tCMD_STOP ")
+        self.writeLog("\t8) \tCMD_I2C_RD ")
+        self.writeLog("\t9) \tCMD_I2C_WR ")
         self.writeLog("\t? or h) Print this menu")
         self.writeLog("\tq) \tQuit")
 
@@ -524,6 +539,10 @@ class oae_serial_host:
                 TxPayload = []
                 TxPayload.append(CommandNum)            
                 self.command_response(CMD_STOP, TxPayload)
+            elif user_input[0] == '8':
+                self.i2c_rd(device_addr = 0x9C, device_register_addr = 0x70)                
+            elif user_input[0] == '9':
+                self.i2c_wr(device_addr = 0x9C, device_register_addr = 0x70, i2c_wr_data = 0x75)                
             elif user_input[0] == 'h':
                 self.print_menu()
             elif user_input[0] == '?':
