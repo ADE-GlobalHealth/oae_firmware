@@ -5,7 +5,11 @@
  * Authors: Drew Pang
  */
 
-void tlv_read_register(void) {
+#include <stdint.h>
+
+#include "tlv320adc3120.h"
+
+void tlv_read_register(uint8_t address, uint8_t data) {
 	;
 }
 

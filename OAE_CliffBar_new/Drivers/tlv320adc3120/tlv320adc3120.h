@@ -17,16 +17,18 @@
 /**
  * Read a register in the ADC.
  *
- * @param
+ * @param address (uint8_t) The register address to read.
+ * @param data (uint8_t*) A pointer to store the data.
  */
-void tlv_read_register(void);
+void tlv_read_register(uint8_t address, uint8_t* data);
 
 /**
  * Write a register in the ADC.
  *
- * @param
+ * @param address (uint8_t) The register address to write.
+ * @param data (uint8_t) The data to write to the register.
  */
-void tlv_write_register(void);
+void tlv_write_register(uint8_t address, uint8_t data);
 
 /**
  * Switch register page in the ADC.
