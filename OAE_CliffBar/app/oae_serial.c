@@ -15,7 +15,8 @@
 SerialStats_t SerStats;
 SerialPacket_t RxPacket;
 
-uint32_t	ADC_Buffer[ADC_BUFFER_SIZE];
+// All buffer transfers between the host and OAE use data in these buffers:
+SerialBuffers_t SerialBuf;
 
 void oae_serial_init(void)
 {
@@ -28,8 +29,14 @@ void oae_serial_init(void)
 	SerStats.rsp_ack_time = 0;
 	SerStats.command_start_time = 0;
 	SerStats.command_turnaround_time = 0;
+	SerialBuf.U32_BufSize = SERIAL_BUFFER_MAX_SIZE;
+	SerialBuf.F32_BufSize = SERIAL_BUFFER_MAX_SIZE;
+	SerialBuf.S32_BufSize = SERIAL_BUFFER_MAX_SIZE;
 
-	oae_fill_adc_buffer(ADC_Buffer);
+	// Fill the buffers with test data:
+	oae_fill_test_buffer(BUF_TYPE_U24);
+	oae_fill_test_buffer(BUF_TYPE_F32);
+	oae_fill_test_buffer(BUF_TYPE_S32);
 }
 
 bool oae_start_command(uint8_t command_num)
@@ -44,56 +51,202 @@ bool oae_stop_command(uint8_t command_num)
 	return true;
 }
 
-// Fill the ADC buffer with test data:
-void oae_fill_adc_buffer(uint32_t *ADCBuf)
+// Fill a buffer with test data:
+//   BufType determines which buffer is filled and with what kind of data
+void oae_fill_test_buffer(BufferDataType_t BufType)
 {
 	int SampleCount;
 	int PacketCount;
 	int i = 0;
 
-	for (PacketCount = 0; PacketCount < ADC_PACKETS_PER_BUFFER; PacketCount++) {
-		for (SampleCount = 0; SampleCount < ADC_SAMPLES_PER_PACKET; SampleCount++) {
+    union {
+        float f;
+        uint32_t u;
+        int32_t s;
+    } sample;
 
-			// Create 24 bit test data with the packet number in the upper 8 bits:
-			ADCBuf[i] = (PacketCount << 16) | (i & 0xFFFF);
-			i++;
+	if (BufType == BUF_TYPE_U24) {
+		SerialBuf.U32_BufSize = SERIAL_BUFFER_MAX_SIZE;
+		for (PacketCount = 0; PacketCount < U24_PACKETS_PER_BUFFER; PacketCount++) {
+			for (SampleCount = 0; SampleCount < U24_SAMPLES_PER_PACKET; SampleCount++) {
+
+				// Create 24 bit test data with the packet number in the upper 8 bits:
+				SerialBuf.U32_Buffer[i] = (PacketCount << 16) | (i & 0xFFFF);
+				i++;
+			}
+		}
+	} else if (BufType == BUF_TYPE_F32) {
+		SerialBuf.F32_BufSize = SERIAL_BUFFER_MAX_SIZE;
+		for (PacketCount = 0; PacketCount < F32_PACKETS_PER_BUFFER; PacketCount++) {
+			for (SampleCount = 0; SampleCount < F32_SAMPLES_PER_PACKET; SampleCount++) {
+
+				// test data:
+				sample.f = 10.0 * (float) i;
+				SerialBuf.F32_Buffer[i] = (uint32_t) sample.f;
+				i++;
+			}
 		}
 	}
+	else if (BufType == BUF_TYPE_S32) {
+		SerialBuf.S32_BufSize = SERIAL_BUFFER_MAX_SIZE;
+		for (PacketCount = 0; PacketCount < S32_PACKETS_PER_BUFFER; PacketCount++) {
+			for (SampleCount = 0; SampleCount < S32_SAMPLES_PER_PACKET; SampleCount++) {
+
+				// test data:
+				sample.s = -10 * i;
+				SerialBuf.S32_Buffer[i] = (uint32_t) sample.s;
+				i++;
+			}
+		}
+	}
+
 }
 
-// Fills a packet payload buffer with 24 bit ADC test data.
+// Fills a packet payload buffer with data.
+//   BufType determines which buffer is filled and with what kind of data
 // The function returns the number of bytes in the payload
-uint32_t oae_fill_adc_data_payload(uint32_t ADCBuf_starting_index, uint32_t *ADCBuf, uint32_t num_samples, uint8_t *payload_buf)
+uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf)
 {
-	uint32_t sample;
+    union {
+        float f;
+        uint32_t u;
+        int32_t s;
+    } sample;
 
-	if ((num_samples * ADC_BYTES_PER_SAMPLE) > SER_MAX_PAYLOAD_LEN) return 0;	// Size error!
+    int payload_offset = 1;	// payload byte 0 holds the data type
+    int payload_size = 0;
 
-	for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
+	if (BufType == BUF_TYPE_U24) {
+		payload_size = num_samples * BYTES_PER_U24 + 1;
+		if (payload_size > SER_MAX_PAYLOAD_LEN) return 0;	// Size error!
 
-		sample = ADCBuf[ADCBuf_starting_index + SampleCount];
-		payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 0] = (sample >> 16) & 0xFF;
-		payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 1] = (sample >> 8) & 0xFF;
-		payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 2] = (sample) & 0xFF;
+		payload_buf[0] = (uint8_t) BUF_TYPE_U24;
+		for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
+			sample.u = SerialBuf.U32_Buffer[Buf_starting_index + SampleCount];
+			payload_buf[payload_offset + SampleCount * BYTES_PER_U24 + 0] = (sample.u >> 16) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_U24 + 1] = (sample.u >> 8) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_U24 + 2] = (sample.u) & 0xFF;
+		}
 	}
-	return (num_samples * ADC_BYTES_PER_SAMPLE);
+	else if (BufType == BUF_TYPE_F32) {
+		payload_size = num_samples * BYTES_PER_F32 + 1;
+		if (payload_size > SER_MAX_PAYLOAD_LEN) return 0;	// Size error!
+
+		payload_buf[0] = (uint8_t) BUF_TYPE_F32;
+		for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
+			sample.f = SerialBuf.F32_Buffer[Buf_starting_index + SampleCount];
+			payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 0] = (sample.u >> 24) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 1] = (sample.u >> 16) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 2] = (sample.u >> 8) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 3] = (sample.u) & 0xFF;
+		}
+	}
+	else if (BufType == BUF_TYPE_S32) {
+		payload_size = num_samples * BYTES_PER_S32 + 1;
+		if (payload_size > SER_MAX_PAYLOAD_LEN) return 0;	// Size error!
+
+		payload_buf[0] = (uint8_t) BUF_TYPE_S32;
+		for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
+			sample.s = SerialBuf.S32_Buffer[Buf_starting_index + SampleCount];
+			payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 0] = (sample.u >> 24) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 1] = (sample.u >> 16) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 2] = (sample.u >> 8) & 0xFF;
+			payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 3] = (sample.u) & 0xFF;
+		}
+	}
+	else return 0;
+
+	return payload_size;
 }
 
-// Copy one packet of received ADC data into the specified ADCBuf
-uint32_t oae_receive_adc_data_payload(uint32_t ADCBuf_starting_index, uint32_t *ADCBuf, uint32_t num_samples, uint8_t *payload_buf)
+// Copy one packet of received  data into the specified Buf
+// payload index 0 contains the buffer data type
+//   This determines which buffer is filled and with what kind of data
+uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, uint8_t *payload_buf)
 {
-	uint32_t sample;
+	static int	buf_sample_index = 0;
 
-	if ((ADCBuf_starting_index + num_samples) > ADC_BUFFER_SIZE) return 0;	// Size error!
+    union {
+        float f;
+        uint32_t u;
+        int32_t s;
+    } sample;
 
-	for (int SampleCount=0; SampleCount<num_samples; SampleCount++) {
+	uint32_t samples_received;
+    int payload_offset = 1;	// payload byte 0 holds the data type, which indicates where to place the data and in which format
 
-		sample = (payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 0] << 16);
-		sample |= (payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 1] << 8);
-		sample |= payload_buf[SampleCount * ADC_BYTES_PER_SAMPLE + 2];
-		ADCBuf[ADCBuf_starting_index + SampleCount] = sample;
-	}
-	return (num_samples * ADC_BYTES_PER_SAMPLE);
+    BufferDataType_t BufType;
+    BufType = payload_buf[0];
+
+
+	if (BufType == BUF_TYPE_U24) {
+	    if (RxCommand == CMD_BUF_START) {
+	    	buf_sample_index = 0;
+	    	SerialBuf.U32_BufSize = 0;
+	    }
+		samples_received = (payload_size-1)/BYTES_PER_U24;
+		if ((buf_sample_index + samples_received) > SERIAL_BUFFER_MAX_SIZE) return 0;	// Size error!
+		else if (samples_received < 1 || samples_received > U24_SAMPLES_PER_PACKET) return 0;
+
+		for (int SampleCount=0; SampleCount<samples_received; SampleCount++) {
+			sample.u = (payload_buf[SampleCount * BYTES_PER_U24 + 0] << 16);
+			sample.u |= (payload_buf[SampleCount * BYTES_PER_U24 + 1] << 8);
+			sample.u |= payload_buf[SampleCount * BYTES_PER_U24 + 2];
+			SerialBuf.U32_Buffer[buf_sample_index + SampleCount] = sample.u;
+		}
+	    if (RxCommand == CMD_BUF_END) {
+	    	buf_sample_index += samples_received;
+	    	SerialBuf.U32_BufSize = buf_sample_index;
+	    }
+	} else if (BufType == BUF_TYPE_S32) {
+	    if (RxCommand == CMD_BUF_START) {
+	    	buf_sample_index = 0;
+	    	SerialBuf.S32_BufSize = 0;
+	    }
+		samples_received = (payload_size-1)/BYTES_PER_S32;
+		if ((buf_sample_index + samples_received) > SERIAL_BUFFER_MAX_SIZE) return 0;	// Size error!
+		else if (samples_received < 1 || samples_received > S32_SAMPLES_PER_PACKET) return 0;
+
+		for (int SampleCount=0; SampleCount<samples_received; SampleCount++) {
+			sample.u = (payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 0] << 24);
+			sample.u |= (payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 1] << 16);
+			sample.u |= (payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 2] << 8);
+			sample.u |= payload_buf[payload_offset + SampleCount * BYTES_PER_S32 + 3];
+			SerialBuf.S32_Buffer[buf_sample_index + SampleCount] = sample.s;
+		}
+	    if (RxCommand == CMD_BUF_END) {
+	    	buf_sample_index += samples_received;
+	    	SerialBuf.S32_BufSize = buf_sample_index;
+	    }
+	} else if (BufType == BUF_TYPE_F32) {
+	    if (RxCommand == CMD_BUF_START) {
+	    	buf_sample_index = 0;
+	    	SerialBuf.F32_BufSize = 0;
+	    }
+		samples_received = (payload_size-1)/BYTES_PER_F32;
+		if ((buf_sample_index + samples_received) > SERIAL_BUFFER_MAX_SIZE) return 0;	// Size error!
+		else if (samples_received < 1 || samples_received > F32_SAMPLES_PER_PACKET) return 0;
+
+		for (int SampleCount=0; SampleCount<samples_received; SampleCount++) {
+			sample.u = (payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 0] << 24);
+			sample.u |= (payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 1] << 16);
+			sample.u |= (payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 2] << 8);
+			sample.u |= payload_buf[payload_offset + SampleCount * BYTES_PER_F32 + 3];
+			SerialBuf.F32_Buffer[buf_sample_index + SampleCount] = sample.f;
+		}
+	    if (RxCommand == CMD_BUF_END) {
+	    	buf_sample_index += samples_received;
+	    	SerialBuf.F32_BufSize = buf_sample_index;
+	    }
+
+	} else
+		return 0;
+
+    if (RxCommand == CMD_BUF) {
+    	buf_sample_index += samples_received;
+    }
+
+	return samples_received;
 }
 
 // This creates a transmit packet and blocks until the data has finished sending.
@@ -129,6 +282,47 @@ bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *pay
     return false;
 }
 
+// Send an error response string:
+bool oae_serial_send_error(char *error_str)
+{
+	uint8_t	TxBuffer[SER_MAX_PAYLOAD_LEN];
+
+	uint8_t buf_len = sprintf((char *)TxBuffer, error_str);
+    return oae_serial_send(RSP_ERR, buf_len, (uint8_t *) TxBuffer);
+}
+
+// Send a data buffer to the host
+//   BufType determines which buffer is sent
+bool oae_serial_send_buffer(BufferDataType_t BufType)
+{
+	int buf_len;
+	uint32_t samples_per_packet;
+	uint32_t packets_per_buffer;
+	uint8_t		TxBuffer[SER_MAX_PAYLOAD_LEN];
+
+	if (BufType == BUF_TYPE_U24) {
+		samples_per_packet = U24_SAMPLES_PER_PACKET;
+		packets_per_buffer = U24_PACKETS_PER_BUFFER;
+	} else if (BufType == BUF_TYPE_F32) {
+		samples_per_packet = F32_SAMPLES_PER_PACKET;
+		packets_per_buffer = F32_PACKETS_PER_BUFFER;
+	} else if (BufType == BUF_TYPE_S32) {
+		samples_per_packet = S32_SAMPLES_PER_PACKET;
+		packets_per_buffer = S32_PACKETS_PER_BUFFER;
+	} else
+		return false;	// invalid BufType
+
+	buf_len = oae_build_buf_data_payload(BufType, 0, samples_per_packet, TxBuffer);
+	oae_serial_send(RSP_BUF_START, buf_len, (uint8_t *) TxBuffer);
+	for (int i=1;i<packets_per_buffer-1;i++) {
+		buf_len = oae_build_buf_data_payload(BufType, i*samples_per_packet, samples_per_packet, TxBuffer);
+		oae_serial_send(RSP_BUF, buf_len, (uint8_t *) TxBuffer);
+	}
+	buf_len = oae_build_buf_data_payload(BufType, samples_per_packet*(U24_PACKETS_PER_BUFFER-1), samples_per_packet, TxBuffer);
+	oae_serial_send(RSP_BUF_END, buf_len, (uint8_t *) TxBuffer);
+
+	return true;
+}
 
 // This function is polled by the calling function.
 // It will assemble a packet and return true when a valid packet is available.
@@ -203,11 +397,13 @@ bool oae_serial_receive(uint8_t rx_char)
     return false;
 }
 
+// This is the main packet receiver function
 void oae_process_rx_packet(void)
 {
-	static int	cmd_adc_buf_packet_count = 0;
-	uint8_t		TxBuffer[APP_RX_DATA_SIZE];
-	int 		buf_len;
+	static int	cmd_buf_packet_count = 0;
+	uint8_t		TxBuffer[SER_MAX_PAYLOAD_LEN];
+	int 		buf_len, samples_received;
+	bool 		ret;
 
 	SerStats.command_start_time = HAL_GetTick();
 
@@ -218,8 +414,7 @@ void oae_process_rx_packet(void)
 			break;
 		case CMD_START:
 			if (RxPacket.payload_size != 1) {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
 				oae_start_command(RxPacket.payload[0]);
@@ -228,8 +423,7 @@ void oae_process_rx_packet(void)
 			break;
 		case CMD_STOP:
 			if (RxPacket.payload_size != 1) {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
 				oae_stop_command(RxPacket.payload[0]);
@@ -244,62 +438,50 @@ void oae_process_rx_packet(void)
   	        SerStats.tx_packet_err_count = 0;
 		    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
 		    break;
-		case CMD_ADC_BUF_REQ:
+		case CMD_BUF_REQ:
 
 			if (RxPacket.payload_size != 1) {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
-				if (RxPacket.payload[0] == 0) {
-					oae_fill_adc_buffer(ADC_Buffer);		// send back test data, otherwise send back the current contents of the buffer
+				BufferDataType_t BufType = RxPacket.payload[0];
+				ret = oae_serial_send_buffer(BufType);
+				if (ret == false) {
+					oae_serial_send_error(ERR_STR_INVALID_PARAMETER);
 				}
-
-				buf_len = oae_fill_adc_data_payload(0, ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
-				oae_serial_send(RSP_ADC_BUF_START, buf_len, (uint8_t *) TxBuffer);
-				for (int i=1;i<ADC_PACKETS_PER_BUFFER-1;i++) {
-					buf_len = oae_fill_adc_data_payload(i*ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
-					oae_serial_send(RSP_ADC_BUF, buf_len, (uint8_t *) TxBuffer);
-				}
-				buf_len = oae_fill_adc_data_payload(ADC_SAMPLES_PER_PACKET*(ADC_PACKETS_PER_BUFFER-1), ADC_Buffer, ADC_SAMPLES_PER_PACKET, TxBuffer);
-				oae_serial_send(RSP_ADC_BUF_END, buf_len, (uint8_t *) TxBuffer);
 			}
 			break;
 
-		case CMD_ADC_BUF_START:
-			cmd_adc_buf_packet_count = 0;
-			if (RxPacket.payload_size == ADC_SAMPLES_PER_PACKET * ADC_BYTES_PER_SAMPLE) {
-				oae_receive_adc_data_payload(cmd_adc_buf_packet_count * ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, RxPacket.payload);
+		case CMD_BUF_START:
+			cmd_buf_packet_count = 0;
+			samples_received =  oae_receive_buf_data_payload(CMD_BUF_START, RxPacket.payload_size, RxPacket.payload);
+			if (samples_received > 0) {
 				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
 			} else {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			break;
-		case CMD_ADC_BUF:
-			if (RxPacket.payload_size == ADC_SAMPLES_PER_PACKET * ADC_BYTES_PER_SAMPLE) {
-				cmd_adc_buf_packet_count++;
-				oae_receive_adc_data_payload(cmd_adc_buf_packet_count * ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, RxPacket.payload);
+		case CMD_BUF:
+			cmd_buf_packet_count++;
+			samples_received =  oae_receive_buf_data_payload(CMD_BUF, RxPacket.payload_size, RxPacket.payload);
+			if (samples_received > 0) {
 				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
 			} else {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			break;
-		case CMD_ADC_BUF_END:
-			if (RxPacket.payload_size == ADC_SAMPLES_PER_PACKET * ADC_BYTES_PER_SAMPLE) {
-				cmd_adc_buf_packet_count++;
-				oae_receive_adc_data_payload(63 * ADC_SAMPLES_PER_PACKET, ADC_Buffer, ADC_SAMPLES_PER_PACKET, RxPacket.payload);
+		case CMD_BUF_END:
+			cmd_buf_packet_count++;
+			samples_received =  oae_receive_buf_data_payload(CMD_BUF_END, RxPacket.payload_size, RxPacket.payload);
+			if (samples_received > 0) {
 				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
 			} else {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			break;
 		case CMD_I2C_RD:
 			if (RxPacket.payload_size != 2) {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
 				uint8_t i2c_devaddr = RxPacket.payload[0];
@@ -347,7 +529,7 @@ int8_t RX_USB_CDC_Data(uint8_t* Buf, uint32_t *Len)
     int index=USB_RxBuffers.pos_process;
     *Len=USB_RxBuffers.CommandsLens[index];     //return the length
     memcpy(Buf,USB_RxBuffers.UserRxBufferFS[index],*Len);
-    //Buf[*Len]= '\0'; //testing only. make sure there is ending char in the returned command string
+
     //check if all data were processed.
     USB_RxBuffers.pos_process++;
     if (USB_RxBuffers.pos_process>=MAX_RX_BUFFERS) //reach the last buffer, need to rewind to 0

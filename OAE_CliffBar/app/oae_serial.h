@@ -33,12 +33,23 @@ extern "C" {
 
 #define SER_PACKET_HEADER 0x7E
 
-#define ADC_BUFFER_SIZE			4096
-#define ADC_BYTES_PER_SAMPLE  	3		// 24 bits per sample * 64 samples/packet = 192 byte payload size
-#define ADC_SAMPLES_PER_PACKET 	64
-#define ADC_PACKETS_PER_BUFFER  (ADC_BUFFER_SIZE / ADC_SAMPLES_PER_PACKET)
+#define SERIAL_BUFFER_MAX_SIZE		4096
 
-#define OAE_SERIAL_PROTOCOL_VERSION "v1.2"
+#define BYTES_PER_U16  			2
+#define BYTES_PER_U24  			3
+#define BYTES_PER_S32  			4
+#define BYTES_PER_F32  			4
+
+#define U16_SAMPLES_PER_PACKET 	64			// 16 bits per sample * 64 samples/packet = 128 byte payload size
+#define U24_SAMPLES_PER_PACKET 	64			// 24 bits per sample * 64 samples/packet = 192 byte payload size
+#define F32_SAMPLES_PER_PACKET 	32			// 32 bits per sample * 32 samples/packet = 128 byte payload size
+#define S32_SAMPLES_PER_PACKET 	32			// 32 bits per sample * 32 samples/packet = 128 byte payload size
+
+#define U24_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / U24_SAMPLES_PER_PACKET)
+#define F32_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / F32_SAMPLES_PER_PACKET)
+#define S32_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / S32_SAMPLES_PER_PACKET)
+
+#define OAE_SERIAL_PROTOCOL_VERSION "v1.3"
 
 typedef struct {
     uint8_t header;
@@ -48,15 +59,31 @@ typedef struct {
     uint8_t checksum;
 } SerialPacket_t;
 
+typedef enum {
+	BUF_TYPE_NONE		= 0,
+	BUF_TYPE_U24		= 1,		// 24 bit unsigned int
+	BUF_TYPE_S32		= 2,		// 32 bit signed int
+	BUF_TYPE_F32		= 3			// 32 bit float
+} BufferDataType_t;
+
+typedef struct {
+	uint32_t	U32_Buffer[SERIAL_BUFFER_MAX_SIZE];
+	int32_t		S32_Buffer[SERIAL_BUFFER_MAX_SIZE];
+	float		F32_Buffer[SERIAL_BUFFER_MAX_SIZE];
+	uint32_t	U32_BufSize;
+	uint32_t	S32_BufSize;
+	uint32_t	F32_BufSize;
+} SerialBuffers_t;
+
 // Host commands:
 typedef enum {
     CMD_NOP 			= 0,		// No payload, no response expected
     CMD_PING 			= 1,		// Ping, no payload, RSP_PING response expected
     CMD_STATUS 			= 2,		// Request status from OAE, no payload, multiple RSP_TEXT responses expected
-	CMD_ADC_BUF_REQ 	= 3,		// Payload: 1 byte: U8, Request ADC buffer # from OAE
-	CMD_ADC_BUF_START 	= 4,		// Payload: 192 bytes: (64) 24 bit ADC samples (the first packet of 64 ADC samples), RSP_ACK or RSP_ERR response expected
-	CMD_ADC_BUF 		= 5,		// Payload: 192 bytes: (64) 24 bit ADC samples (packet of 64 ADC samples), no response expected (there will be 62 of these packets in a 4096 sample buffer)
-	CMD_ADC_BUF_END 	= 6,		// Payload: 192 bytes: (64) 24 bit ADC samples (the final packet of 64 ADC samples), RSP_ACK or RSP_ERR response expected
+	CMD_BUF_REQ 		= 3,		// Payload: 1 byte: U8, Request buffer # from OAE
+	CMD_BUF_START 		= 4,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
+	CMD_BUF 			= 5,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
+	CMD_BUF_END 		= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
 	CMD_I2C_RD		 	= 7,		// Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
 	CMD_I2C_WR			= 8,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
 	CMD_START			= 9, 		// Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
@@ -71,9 +98,9 @@ typedef enum  {
     RSP_NAK 			= 103,		// No payload
     RSP_ERR 			= 104,		// Payload: Up to 250 bytes, text string
     RSP_TEXT 			= 105,		// Payload: Up to 250 bytes, text string
-	RSP_ADC_BUF_START 	= 106,		// Payload: 192 bytes: (64) 24 bit ADC samples (the first packet of 64 ADC samples)
-	RSP_ADC_BUF 		= 107,		// Payload: 192 bytes: (64) 24 bit ADC samples (packet of 64 ADC samples, there will be 62 of these packets in a 4096 sample buffer)
-	RSP_ADC_BUF_END		= 108,		// Payload: 192 bytes: (64) 24 bit ADC samples (the final packet of 64 ADC samples)
+	RSP_BUF_START 		= 106,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer
+	RSP_BUF 			= 107,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data.
+	RSP_BUF_END			= 108,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer
     RSP_U8 				= 109,		// Payload: 1 byte:  U8
     RSP_U32 			= 110,		// Payload: 4 bytes: U32
 	RSP_EVENT			= 111,		// Payload: 1 byte:  U8 (event number)
@@ -95,10 +122,14 @@ typedef struct {
 void oae_serial_init(void);
 bool oae_start_command(uint8_t command_num);
 bool oae_stop_command(uint8_t command_num);
-void oae_fill_adc_buffer(uint32_t *ADCBuf);
-uint32_t oae_fill_adc_data_payload(uint32_t ADCBuf_starting_index, uint32_t *ADCBuf, uint32_t num_samples, uint8_t *payload_buf);
-uint32_t oae_receive_adc_data_payload(uint32_t ADCBuf_starting_index, uint32_t *ADCBuf, uint32_t num_samples, uint8_t *payload_buf);
+void oae_fill_test_buffer(BufferDataType_t BufType);
+
+uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf);
+uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, uint8_t *payload_buf);
 bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *payload);
+bool oae_serial_send_error(char *error_str);
+bool oae_serial_send_buffer(BufferDataType_t BufType);
+
 bool oae_serial_receive(uint8_t rx_char);
 void oae_process_rx_packet(void);
 
@@ -108,7 +139,10 @@ int8_t RX_USB_CDC_Data(uint8_t* Buf, uint32_t *Len);
 void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2);
 void r(uint16_t devaddr, uint16_t memaddr, uint8_t* data);
 
-#define ERR_STR_INVALID_PAYLOAD_SIZE "ERR: payload_size invalid"
+#define ERR_STR_INVALID_PAYLOAD_SIZE 	"ERR: payload_size invalid"
+#define ERR_STR_INVALID_PARAMETER 		"ERR: calling parameter invalid"
+
+extern SerialBuffers_t SerialBuf;
 
 #ifdef __cplusplus
 }
