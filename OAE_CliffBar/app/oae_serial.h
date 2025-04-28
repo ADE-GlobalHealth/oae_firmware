@@ -119,9 +119,16 @@ typedef struct {
     int command_turnaround_time;
 } SerialStats_t;
 
+
+// Action commands:
+typedef enum {
+    ACTION_NONE 		= 0,
+	ACTION_OAE_TEST 	= 1,		// Run the OAE test once (does not require a stop command)
+} ActionCommand_t;
+
 void oae_serial_init(void);
-bool oae_start_command(uint8_t command_num);
-bool oae_stop_command(uint8_t command_num);
+bool oae_start_command(ActionCommand_t action);
+bool oae_stop_command(ActionCommand_t action);
 void oae_fill_test_buffer(BufferDataType_t BufType);
 
 uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf);

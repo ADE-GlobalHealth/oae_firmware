@@ -80,6 +80,8 @@ RSP_U32 			= 110   # Payload: 4 bytes: U32
 RSP_EVENT			= 111   # Payload: 1 byte:  U8 (event number)
 RSP_INVALID 		= 112   # No payload (Command from host was not recognized)
 
+ACTION_OAE_TEST 	= 1		# Run the OAE test once (does not require a stop command)
+
 class oae_serial_host:
     RxQ = []
     RxPayload = []
@@ -521,7 +523,7 @@ class oae_serial_host:
         self.writeLog("\t3) \tCMD_BUF Upload (host test pattern)")
         self.writeLog("\t4) \tCMD_BUF Request 0 (oae test pattern)")
         self.writeLog("\t5) \tCMD_BUF Request 1 (current oae buffer)")
-        self.writeLog("\t6) \tCMD_START ")
+        self.writeLog("\t6) \tCMD_START ACTION_OAE_TEST")
         self.writeLog("\t7) \tCMD_STOP ")
         self.writeLog("\t8) \tCMD_I2C_RD ")
         self.writeLog("\t9) \tCMD_I2C_WR ")
@@ -551,7 +553,7 @@ class oae_serial_host:
                 TxPayload.append(BufferNum)            
                 self.command_response(CMD_BUF_REQ, TxPayload)
             elif user_input[0] == '6':
-                CommandNum = 1
+                CommandNum = ACTION_OAE_TEST
                 TxPayload = []
                 TxPayload.append(CommandNum)            
                 self.command_response(CMD_START, TxPayload)

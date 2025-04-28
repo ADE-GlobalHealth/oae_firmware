@@ -11,12 +11,17 @@
 #include "usbd_cdc_if.h"
 #include "main.h"
 #include "oae_serial.h"
+#include "oae_algorithm.h"
 
 SerialStats_t SerStats;
 SerialPacket_t RxPacket;
 
 // All buffer transfers between the host and OAE use data in these buffers:
 SerialBuffers_t SerialBuf;
+
+// This struct manages the OAE algorithm data and debug information:
+oae_data_t* oae_data = 0;
+
 
 void oae_serial_init(void)
 {
@@ -39,13 +44,48 @@ void oae_serial_init(void)
 	oae_fill_test_buffer(BUF_TYPE_S32);
 }
 
-bool oae_start_command(uint8_t command_num)
+bool oae_algorithm_test(void)
 {
-	// add start commands here
+	uint8_t	TxBuffer[SER_MAX_PAYLOAD_LEN];
+	uint8_t buf_len;
+
+	int t0, t1, t2;
+	t0 = HAL_GetTick();
+
+	if (oae_data == 0) {
+		// allocate the oae data struct the first time this is called:
+		oae_data =  setup_oae_data();
+	}
+	t1 = HAL_GetTick();
+	oae_algorithm(oae_data, SerialBuf.S32_Buffer);
+	t2 = HAL_GetTick();
+	buf_len = sprintf((char *)TxBuffer, "oae_algorithm_test: %d %d", t1-t0, t2-t1);
+    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+
+	buf_len = sprintf((char *)TxBuffer, "\t times: %d %d %d %d %d", oae_data->time1 - oae_data->start_time, oae_data->time2 - oae_data->start_time, oae_data->time3 - oae_data->start_time, oae_data->time4 - oae_data->start_time, oae_data->time5 - oae_data->start_time);
+    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+
 	return true;
 }
 
-bool oae_stop_command(uint8_t command_num)
+bool oae_start_command(ActionCommand_t action)
+{
+	// Start the selected action:
+	switch(action)
+	{
+		case ACTION_OAE_TEST:
+			oae_algorithm_test();
+			break;
+
+		default:
+			return false;	// invalid action command
+			break;
+	}
+
+	return true;
+}
+
+bool oae_stop_command(ActionCommand_t action)
 {
 	// add stop commands here
 	return true;
@@ -417,8 +457,9 @@ void oae_process_rx_packet(void)
 				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
-				oae_start_command(RxPacket.payload[0]);
-				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+				ret = oae_start_command((ActionCommand_t) RxPacket.payload[0]);
+				if (ret == true) oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
+				else oae_serial_send(RSP_NAK, 0, (uint8_t *) TxBuffer);
 			}
 			break;
 		case CMD_STOP:
@@ -426,7 +467,7 @@ void oae_process_rx_packet(void)
 				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
-				oae_stop_command(RxPacket.payload[0]);
+				oae_stop_command((ActionCommand_t) RxPacket.payload[0]);
 				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
 			}
 			break;
