@@ -1,4 +1,7 @@
-# Setup
+# Embedded Setup
+
+This document outlines setup required for developing embedded code on the OAE
+device.
 
 Clone this repository in a directory of your choice.
 
