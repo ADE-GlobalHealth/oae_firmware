@@ -9,6 +9,8 @@
  * Authors: Drew Pang
  */
 
+extern I2C_HandleTypeDef hi2c3;
+
 #include "tlv320adcx120_page0.h"
 // page 1 contains voice detection registers which are not needed
 //#include "tlv320adcx120_page1.h"
@@ -17,6 +19,9 @@
 #include "tlv320adcx120_page4.h"
 #include "tlv320adcx120_page5.h"
 #include "tlv320adcx120_page6.h"
+
+// TLV I2C device ID
+# define TLV_DEVICE_ID  ((uint8_t) 0b1001110)
 
 /**
  * TLV ADC configuration struct.
@@ -108,9 +113,9 @@ void _tlv_write_register(uint8_t address, uint8_t data);
 /**
  * Switch register page in the ADC.
  *
- * @param
+ * @param page_number (uint8_t) The register page to switch to.
  */
-void _tlv_switch_register_page(void);
+void _tlv_switch_register_page(uint8_t page_number);
 
 
 /**
