@@ -9,13 +9,14 @@
 #include <main.h>
 #include <arm_math.h>
 #include "dual_dma.h"
-#include "tlv320adcx120_page0.h"
+//#include "tlv320adcx120_page0.h"
 #include <stm32l4xx_hal_sai.h>
 #include <stm32l4xx_hal_dac.h>
 #include <stdbool.h>
 
 #include "oae_serial.h"
 #include "usbd_cdc_if.h"
+#include "oae_adc.h"
 
 #define NS  4096
 #define n_data 1000
@@ -50,7 +51,7 @@ uint8_t* pData = &data1;
 
 /**
  * Write to a register in a peripheral over I2C.
- * 
+ *
  * @param devaddr The I2C device address to write to.
  * @param memaddr The register address to write to.
  * @param data2 The data to write to the register.
@@ -63,7 +64,7 @@ void w(uint16_t devaddr, uint16_t memaddr, uint8_t data2){
 
 /**
  * Read a register from a peripheral over I2C.
- * 
+ *
  * @param devaddr The I2C device address to read from.
  * @param memaddr The register address to read from.
  * @param data A data buffer to store the read data.
@@ -73,21 +74,21 @@ void r(uint16_t devaddr, uint16_t memaddr, uint8_t* data){
 }
 
 /**
- * Startup ADC by writing to specific registers on the device. 
- * More info can be found about the specific registers in the ADC datasheet: 
+ * Startup ADC by writing to specific registers on the device.
+ * More info can be found about the specific registers in the ADC datasheet:
  * https://www.ti.com/lit/ds/symlink/tlv320adc3120.pdf
- * Example config script is on pg 105, data on registers is on pg 60 
- * 
+ * Example config script is on pg 105, data on registers is on pg 60
+ *
  * Can sniff I2C messages using Analog Discovery 2.
 */
-void init_adc() {
+void init_adc_old() {
 	// Wait 1 ms
 	HAL_Delay(1000);
 
 	uint8_t read_data = UINT8_MAX;
 	r(ADC_ADDRESS, 0x02, &read_data);
 	r(ADC_ADDRESS, 0x13, &read_data);
-  	
+
 	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
     w(ADC_ADDRESS, 0x02, 0x81);
   	r(ADC_ADDRESS, 0x02, &read_data);
@@ -114,7 +115,7 @@ void init_adc() {
 /**
  * The function below is currently not being used; it potentially might come back
  *  if we find we need to stop the ADC at some point in the runtime
-*/ 
+*/
 void end_adc(){
 	// Enter sleep mode by writing to P0_R2
 	w(ADC_ADDRESS, 0x02, SLEEP_CFG_AREG_SELECT_INTERNAL | SLEEP_CFG_SLEEP_ENZ_SLEEP);
@@ -139,7 +140,7 @@ void app_setup() {
 
 	oae_serial_init();
 	// Initialize ADC through I2C
-	init_adc();
+	init_adc_old();
 
 	// Start DMA channel for receiving data from mic
 	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, BUFFER_SIZE);
