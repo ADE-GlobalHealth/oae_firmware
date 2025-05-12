@@ -23,6 +23,10 @@ uint32_t dac_wave_lut[DAC_LUT_SAMPLES] = { 0x07d007d0, 0x09b60a15, 0x0b7f0c27,
 		0x04790894, 0x02db064a, 0x018a0421, 0x0098024a, 0x001600ec, 0x000a0026,
 		0x0075000a, 0x01510098, 0x029101c6, 0x04210379, 0x05ea058b, };
 
+void init_dac(void) {
+	HAL_TIM_Base_Start(&htim6);
+}
+
 void start_dual_dma_dac_output(void) {
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*) dac_wave_lut,
 	DAC_LUT_SIZE, DAC_ALIGN_12B_R);

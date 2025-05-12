@@ -7,21 +7,19 @@
 #include "oae_adc.h"
 #include "oae_dac.h"
 
-extern TIM_HandleTypeDef htim6;
-
 /**
  * Runs setup and configuration functions once at the beginning
  * of the runtime.
  */
 void app_setup() {
-	// Start Timer for the DACs
-	HAL_TIM_Base_Start(&htim6);
-
 	// Initialize oae serial protocol
 	oae_serial_init();
 
 	// Initialize ADC through I2C
 	init_adc();
+
+	// Initialize DAC timers
+	init_dac();
 }
 
 uint32_t time = 0;
