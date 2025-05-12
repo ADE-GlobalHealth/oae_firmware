@@ -1,10 +1,3 @@
-/**
- * tlv320adc3120 driver using memory page headers (tlv320adcx120_pagex.h) from
- * Texas Instruments.
- *
- * Authors: Drew Pang
- */
-
 #include <stdint.h>
 
 #include "tlv320adc3120.h"
@@ -16,7 +9,7 @@ void _tlv_read_register(uint8_t address, uint8_t *data) {
 
 
 void _tlv_write_register(uint8_t address, uint8_t data) {
-	HAL_I2C_Mem_Write(&hi2c3, TLV_DEVICE_ID, address, 1, data, 1,
+	HAL_I2C_Mem_Write(&hi2c3, TLV_DEVICE_ID, address, 1, &data, 1,
 			HAL_MAX_DELAY);
 }
 
@@ -24,7 +17,7 @@ void _tlv_write_register(uint8_t address, uint8_t data) {
 void _tlv_write_register_mask(uint8_t address, uint8_t mask, uint8_t data) {
 	// read data in register
 	uint8_t read_data;
-	_tlv_read_register(address, read_data);
+	_tlv_read_register(address, &read_data);
 
 	// clear mask bits and or with write data
 	// NOTE: UB possible if mask does not cover the write data
@@ -84,7 +77,7 @@ void tlv_init(tlv_config_t tlv_config) {
 
 	// GPIO1 function
 	switch (tlv_config.gpio1_function) {
-	case DISABLED:
+	case OFF:
 		_tlv_write_register_mask(GPIO_CFG0_ADDRESS, GPIO_CFG0_GPIO1_CFG_MASK,
 				GPIO_CFG0_GPIO1_CFG_DISABLED);
 	case GPI:
@@ -138,11 +131,6 @@ void tlv_init(tlv_config_t tlv_config) {
 		PWR_CFG_ADC_PDZ_OFF);
 	}
 
-}
-
-
-void tlv_start_adc_conversions(void) {
-	;
 }
 
 
