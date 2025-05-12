@@ -73,59 +73,59 @@ void r(uint16_t devaddr, uint16_t memaddr, uint8_t* data){
 	HAL_I2C_Mem_Read(&hi2c3, devaddr, memaddr, 1, data, 1, HAL_MAX_DELAY);
 }
 
-///**
-// * Startup ADC by writing to specific registers on the device.
-// * More info can be found about the specific registers in the ADC datasheet:
-// * https://www.ti.com/lit/ds/symlink/tlv320adc3120.pdf
-// * Example config script is on pg 105, data on registers is on pg 60
-// *
-// * Can sniff I2C messages using Analog Discovery 2.
-//*/
-//void init_adc() {
-//	// Wait 1 ms
-//	HAL_Delay(1000);
-//
-//	uint8_t read_data = UINT8_MAX;
-//	r(ADC_ADDRESS, 0x02, &read_data);
-//	r(ADC_ADDRESS, 0x13, &read_data);
-//
-//	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
-//    w(ADC_ADDRESS, 0x02, 0x81);
-//  	r(ADC_ADDRESS, 0x02, &read_data);
-//
-//	HAL_Delay(10);
-//
-//	// Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
-//	w(ADC_ADDRESS, 0x73, 0xC0);
-//	r(ADC_ADDRESS, 0x73, &read_data);
-//
-//	// Configure output as I2S
-//	w(ADC_ADDRESS, 0x07, 0x40);
-//	r(ADC_ADDRESS, 0x07, &read_data);
-//
-//	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
-//	w(ADC_ADDRESS, 0x74, 0xC0);
-//	r(ADC_ADDRESS, 0x74, &read_data);
-//
-//	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
-//	w(ADC_ADDRESS, 0x75, 0xE0);
-//	r(ADC_ADDRESS, 0x75, &read_data);
-//}
+/**
+ * Startup ADC by writing to specific registers on the device.
+ * More info can be found about the specific registers in the ADC datasheet:
+ * https://www.ti.com/lit/ds/symlink/tlv320adc3120.pdf
+ * Example config script is on pg 105, data on registers is on pg 60
+ *
+ * Can sniff I2C messages using Analog Discovery 2.
+*/
+void init_adc_old() {
+	// Wait 1 ms
+	HAL_Delay(1000);
 
-///**
-// * The function below is currently not being used; it potentially might come back
-// *  if we find we need to stop the ADC at some point in the runtime
-//*/
-//void end_adc(){
-//	// Enter sleep mode by writing to P0_R2
-//	w(ADC_ADDRESS, 0x02, SLEEP_CFG_AREG_SELECT_INTERNAL | SLEEP_CFG_SLEEP_ENZ_SLEEP);
-//	// Wait at least 6ms
-//	HAL_Delay(6);
-//	// Read P0_R119 to check device shutdown and sleep mode status
-//	uint8_t status = 0;
-//	HAL_I2C_Mem_Read(&hi2c3, ADC_ADDRESS, 0x77, 1, &status, 1, HAL_MAX_DELAY);
-//	if (status != DEV_STS1_MODE_STS_SLEEP) HAL_Delay(1000);
-//}
+	uint8_t read_data = UINT8_MAX;
+	r(ADC_ADDRESS, 0x02, &read_data);
+	r(ADC_ADDRESS, 0x13, &read_data);
+
+	// Wake-up the device with an I2C write into P0_R2 using an internal AREG
+    w(ADC_ADDRESS, 0x02, 0x81);
+  	r(ADC_ADDRESS, 0x02, &read_data);
+
+	HAL_Delay(10);
+
+	// Enable input Ch-1 and Ch-2 by an I2C write into P0_R115
+	w(ADC_ADDRESS, 0x73, 0xC0);
+	r(ADC_ADDRESS, 0x73, &read_data);
+
+	// Configure output as I2S
+	w(ADC_ADDRESS, 0x07, 0x40);
+	r(ADC_ADDRESS, 0x07, &read_data);
+
+	// Enable ASI output Ch-1 and Ch-2 slots by an I2C write into P0_R116
+	w(ADC_ADDRESS, 0x74, 0xC0);
+	r(ADC_ADDRESS, 0x74, &read_data);
+
+	// Power-up the ADC, MICBIAS, and PLL by an I2C write into P0_R117
+	w(ADC_ADDRESS, 0x75, 0xE0);
+	r(ADC_ADDRESS, 0x75, &read_data);
+}
+
+/**
+ * The function below is currently not being used; it potentially might come back
+ *  if we find we need to stop the ADC at some point in the runtime
+*/
+void end_adc(){
+	// Enter sleep mode by writing to P0_R2
+	w(ADC_ADDRESS, 0x02, SLEEP_CFG_AREG_SELECT_INTERNAL | SLEEP_CFG_SLEEP_ENZ_SLEEP);
+	// Wait at least 6ms
+	HAL_Delay(6);
+	// Read P0_R119 to check device shutdown and sleep mode status
+	uint8_t status = 0;
+	HAL_I2C_Mem_Read(&hi2c3, ADC_ADDRESS, 0x77, 1, &status, 1, HAL_MAX_DELAY);
+	if (status != DEV_STS1_MODE_STS_SLEEP) HAL_Delay(1000);
+}
 
 
 /**
@@ -140,10 +140,10 @@ void app_setup() {
 
 	oae_serial_init();
 	// Initialize ADC through I2C
-	init_adc();
+	init_adc_old();
 
-//	// Start DMA channel for receiving data from mic
-//	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, BUFFER_SIZE);
+	// Start DMA channel for receiving data from mic
+	HAL_SAI_Receive_DMA(&hsai_BlockA2,(uint8_t*) data_i2s, BUFFER_SIZE);
 }
 
 uint32_t time = 0;

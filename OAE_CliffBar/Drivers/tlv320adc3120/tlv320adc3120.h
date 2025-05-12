@@ -26,7 +26,7 @@ extern I2C_HandleTypeDef hi2c3;
 
 
 // TLV I2C device ID
-# define TLV_DEVICE_ID  ((uint8_t) 0b1001110)
+# define TLV_DEVICE_ID  ((uint8_t) 0x9C)
 
 
 /**
@@ -87,6 +87,7 @@ typedef struct {
 	enable_e out_ch_en[4];
 	enable_e micbias_en;
 	enable_e adc_en;
+	enable_e pll_en;
 } tlv_config_t;
 
 

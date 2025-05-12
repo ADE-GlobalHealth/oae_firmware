@@ -10,6 +10,7 @@ void init_adc(void) {
 		.out_ch_en = {1,1,0,0}, // enable channels 1 & 2
 		.micbias_en = ENABLED,
 		.adc_en = ENABLED,
+		.pll_en = ENABLED,
 	};
 
 	tlv_init(adc_config);
