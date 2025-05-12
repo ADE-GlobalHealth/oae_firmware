@@ -104,9 +104,9 @@ void _tlv_read_register(uint8_t address, uint8_t *data);
  * Write a register in the ADC.
  *
  * @param address (uint8_t) The register address to write.
- * @param data (uint8_t) The data to write to the register.
+ * @param data (uint8_t *) A pointer to the data to write to the register.
  */
-void _tlv_write_register(uint8_t address, uint8_t data);
+void _tlv_write_register(uint8_t address, uint8_t *data);
 
 /**
  * Write a register in the ADC using a mask.

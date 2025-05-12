@@ -7,8 +7,8 @@ void _tlv_read_register(uint8_t address, uint8_t *data) {
 	HAL_MAX_DELAY);
 }
 
-void _tlv_write_register(uint8_t address, uint8_t data) {
-	HAL_I2C_Mem_Write(&hi2c3, TLV_DEVICE_ID, address, 1, &data, 1,
+void _tlv_write_register(uint8_t address, uint8_t *data) {
+	HAL_I2C_Mem_Write(&hi2c3, TLV_DEVICE_ID, address, 1, data, 1,
 	HAL_MAX_DELAY);
 }
 
@@ -21,11 +21,11 @@ void _tlv_write_register_mask(uint8_t address, uint8_t mask, uint8_t data) {
 	// NOTE: UB possible if mask does not cover the write data
 	read_data &= ~mask;
 	read_data |= data;
-	_tlv_write_register(address, read_data);
+	_tlv_write_register(address, &read_data);
 }
 
 void _tlv_switch_register_page(uint8_t page_number) {
-	_tlv_write_register(PAGE_CFG_ADDRESS, page_number);
+	_tlv_write_register(PAGE_CFG_ADDRESS, &page_number);
 }
 
 void tlv_init(tlv_config_t tlv_config) {
@@ -109,7 +109,7 @@ void tlv_init(tlv_config_t tlv_config) {
 	}
 	// mask not required, register is only used for analog channel
 	// enable/disable
-	_tlv_write_register(IN_CH_EN_ADDRESS, analog_in_data);
+	_tlv_write_register(IN_CH_EN_ADDRESS, &analog_in_data);
 
 	// digital output channel enable
 	uint8_t digital_out_data = ASI_OUT_CH_EN_DEFAULT;
@@ -119,7 +119,7 @@ void tlv_init(tlv_config_t tlv_config) {
 	}
 	// mask not required, register is only used for digital channel
 	// enable/disable
-	_tlv_write_register(ASI_OUT_CH_EN_ADDRESS, digital_out_data);
+	_tlv_write_register(ASI_OUT_CH_EN_ADDRESS, &digital_out_data);
 
 	// micbias enable
 	switch (tlv_config.micbias_en) {
@@ -158,8 +158,10 @@ void tlv_init(tlv_config_t tlv_config) {
 }
 
 void tlv_software_reset(void) {
+	uint8_t sw_reset_data = SW_RESET_RESET;
+
 	// rest of register is 0 by default, no masking required
-	_tlv_write_register(SW_RESET_ADDRESS, SW_RESET_RESET);
+	_tlv_write_register(SW_RESET_ADDRESS, &sw_reset_data);
 }
 
 void tlv_sleep(enable_e enabled) {
