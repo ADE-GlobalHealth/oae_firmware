@@ -14,6 +14,9 @@ void init_adc(void) {
 	};
 
 	tlv_init(adc_config);
+
+	// wake up from sleep
+	tlv_sleep(DISABLED);
 }
 
 

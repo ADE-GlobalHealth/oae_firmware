@@ -148,11 +148,11 @@ void tlv_init(tlv_config_t tlv_config) {
 	switch (tlv_config.pll_en) {
 	case ENABLED:
 		_tlv_write_register_mask(PWR_CFG_ADDRESS, PWR_CFG_PLL_PDZ_MASK,
-				PWR_CFG_PLL_PDZ_ON);
+		PWR_CFG_PLL_PDZ_ON);
 		break;
 	case DISABLED:
-		_tlv_write_register_maks(PWR_CFG_ADDRESS, PWR_CFG_PLL_PDZ_MASK,
-				PWR_CFG_PLL_PDZ_OFF);
+		_tlv_write_register_mask(PWR_CFG_ADDRESS, PWR_CFG_PLL_PDZ_MASK,
+		PWR_CFG_PLL_PDZ_OFF);
 		break;
 	}
 }
