@@ -1,11 +1,4 @@
-/*
- * app_main.c
- *
- *  Created on: Sep 19, 2023
- *      Author: veswaranandam
- */
-
-#include <app_core.h>
+#include <app_main.h>
 #include <main.h>
 #include <arm_math.h>
 #include "dual_dma.h"
@@ -54,8 +47,8 @@ uint32_t Wave_LUT[NS] = { 0x07d007d0, 0x09b60a15, 0x0b7f0c27, 0x0d0f0dda,
 		0x02db064a, 0x018a0421, 0x0098024a, 0x001600ec, 0x000a0026, 0x0075000a,
 		0x01510098, 0x029101c6, 0x04210379, 0x05ea058b, };
 
-volatile uint16_t data_i2s[BUFFER_SIZE];
-volatile uint16_t data_i2s_2[BUFFER_SIZE];
+volatile uint32_t data_i2s[BUFFER_SIZE];
+volatile uint32_t data_i2s_2[BUFFER_SIZE];
 
 uint8_t data1 = 0x01;
 uint8_t *pData = &data1;
