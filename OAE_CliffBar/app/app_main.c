@@ -1,11 +1,4 @@
-/*
- * app_main.c
- *
- *  Created on: Sep 19, 2023
- *      Author: veswaranandam
- */
-
-#include <app_core.h>
+#include <app_main.h>
 #include <main.h>
 #include <arm_math.h>
 #include "dual_dma.h"
@@ -54,8 +47,8 @@ uint32_t Wave_LUT[NS] = { 0x07d007d0, 0x09b60a15, 0x0b7f0c27, 0x0d0f0dda,
 		0x02db064a, 0x018a0421, 0x0098024a, 0x001600ec, 0x000a0026, 0x0075000a,
 		0x01510098, 0x029101c6, 0x04210379, 0x05ea058b, };
 
-volatile uint16_t data_i2s[BUFFER_SIZE];
-volatile uint16_t data_i2s_2[BUFFER_SIZE];
+volatile uint32_t data_i2s[BUFFER_SIZE];
+volatile uint32_t data_i2s_2[BUFFER_SIZE];
 
 uint8_t data1 = 0x01;
 uint8_t *pData = &data1;
@@ -113,61 +106,4 @@ void app_loop() {
 			}
 		}
 	}
-
-//	 counter++;
-//	 w(0x12,0x02,SLEEP_CFG_AREG_SELECT_INTERNAL & SLEEP_CFG_SLEEP_ENZ_ACTIVE);
-//
-//	 if (counter == 200 && endflag == false){
-//	 	// end_adc();
-//	 	endflag = true;
-//	 }
-//     // if (CheckButtonState(SW1_GPIO_Port,SW1_Pin,time)){
-//     // 	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
-//     // }
-//	 HAL_Delay(1000);
-//	 HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
 }
-
-// #define BUFFER_SIZE 128
-// int16_t adcData[BUFFER_SIZE];
-// int16_t dacData[BUFFER_SIZE];
-// static volatile int16_t *inputBufferPtr;
-// static volatile int16_t *outputBufferPtr = &dacData;
-
-// uint8_t dataReadyFlag;
-
-// void HAL_I2S_DR_Half_Callback(SAI_HandleTypeDef *hi2s){
-// 	inputBufferPtr = &adcData[0];
-// 	outputBufferPtr = &dacData[0];
-
-// 	dataReadyFlag = 1;
-// }
-
-// void HAL_I2S_DR_Full_Callback(SAI_HandleTypeDef *hi2s){
-// 	inputBufferPtr = &adcData[BUFFER_SIZE/2];
-// 	outputBufferPtr = &dacData[BUFFER_SIZE/2];
-// 	dataReadyFlag = 1;
-// }
-
-// #define INT16_TO_FLOAT 1.0f/32768.0f
-// #define FLOAT_TO_INT16 32768.0f
-
-// void processData(){
-// 	static float leftIn, leftOut;
-// 	static float rightIn, rightOut;
-// 	for (uint8_t n = 0; n < (BUFFER_SIZE/2) - 1 ; n+= 2){
-// 		leftIn = INT16_TO_FLOAT * inputBufferPtr[n];
-// 		if (leftIn > 1.0f){
-// 			leftIn -= 2.0f;
-// 		}
-
-// 		leftOut = leftIn;
-// 		outputBufferPtr[n] = (int16_t) (FLOAT_TO_INT16 * leftOut);
-// 		rightIn = INT16_TO_FLOAT * inputBufferPtr[n + 1];
-// 		if (rightIn > 1.0f){
-// 			rightIn -= 2.0f;
-// 		}
-// 		outputBufferPtr[n + 1] = (int16_t) (FLOAT_TO_INT16 * rightOut);
-// 	}
-// 	dataReadyFlag = 0;
-// }
