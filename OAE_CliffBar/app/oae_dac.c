@@ -29,7 +29,7 @@ void init_dac(void) {
 
 void start_dac_output(void) {
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*) dac_wave_lut,
-	DAC_LUT_SIZE, DAC_ALIGN_12B_R);
+	DAC_LUT_SAMPLES, DAC_ALIGN_12B_R);
 }
 
 void stop_dac_output(void) {
