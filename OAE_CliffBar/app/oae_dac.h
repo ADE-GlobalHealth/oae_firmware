@@ -4,10 +4,9 @@
 
 #pragma once
 
+#include <oae_dual_dma.h>
 #include <stm32l4xx_hal.h>
 #include <stm32l4xx_hal_dac.h>
-
-#include "dual_dma.h"
 
 //extern DMA_HandleTypeDef hdma_dac_ch1; TODO: remove if not used
 extern TIM_HandleTypeDef htim6;
