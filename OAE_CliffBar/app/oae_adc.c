@@ -19,4 +19,11 @@ void init_adc(void) {
 	tlv_sleep(DISABLED);
 }
 
+// TODO: these ideally should not be global variables
+volatile uint32_t data_i2s_0[BUFFER_SIZE];
+volatile uint32_t data_i2s_1[BUFFER_SIZE];
+
+void start_dma_adc_input(void) {
+	HAL_SAI_Receive_DMA(&hsai_BlockA2, (uint8_t*) data_i2s_0, BUFFER_SIZE);
+}
 

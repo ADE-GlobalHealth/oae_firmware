@@ -1,0 +1,26 @@
+/**
+ * DAC functions for device use.
+ */
+
+#pragma once
+
+#include <stm32l4xx_hal.h>
+#include <stm32l4xx_hal_dac.h>
+
+#include "dual_dma.h"
+
+//extern DMA_HandleTypeDef hdma_dac_ch1;
+extern DAC_HandleTypeDef hdac1;
+
+// TODO: differentiate between these
+#define DAC_LUT_SIZE 128
+#define DAC_LUT_SAMPLES 4096
+
+// DAC output look up table. Generating using tools/lut_gen.py.
+extern uint32_t dac_wave_lut[DAC_LUT_SAMPLES];
+
+/**
+ * Start a dual DMA output with two DAC outputs.
+ * TODO: finish docstring
+ */
+void start_dual_dma(void);
