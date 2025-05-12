@@ -15,5 +15,8 @@ void app_setup(void);
 /*
  * OAE device application main loop to run continuously after all system and
  * OAE device specific initialization.
+ *
+ * Do not use HAL_Delay in app_loop, because it generates an interrupt that halts
+ * DMA channels
  */
 void app_loop(void);
