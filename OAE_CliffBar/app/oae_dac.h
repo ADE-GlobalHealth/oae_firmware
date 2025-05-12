@@ -25,7 +25,11 @@ extern uint32_t dac_wave_lut[DAC_LUT_SAMPLES];
 void init_dac(void);
 
 /**
- * Start a dual DMA output with two DAC outputs.
- * TODO: finish docstring
+ * Start dual DMA output with the two DAC outputs.
  */
-void start_dual_dma(void);
+void start_dac_output(void);
+
+/**
+ * Stop dual DMA output of the two DAC outputs.
+ */
+void stop_dac_output(void);

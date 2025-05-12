@@ -27,3 +27,4 @@ void start_dma_adc_input(void) {
 	HAL_SAI_Receive_DMA(&hsai_BlockA2, (uint8_t*) data_i2s_0, BUFFER_SIZE);
 }
 
+//todo: write function or modify the above to only collect 4096 samples

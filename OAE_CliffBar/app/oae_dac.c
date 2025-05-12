@@ -27,7 +27,12 @@ void init_dac(void) {
 	HAL_TIM_Base_Start(&htim6);
 }
 
-void start_dual_dma_dac_output(void) {
+void start_dac_output(void) {
 	HAL_DAC_Start_DualDMA(&hdac1, DAC_CHANNEL_12D, (uint32_t*) dac_wave_lut,
 	DAC_LUT_SIZE, DAC_ALIGN_12B_R);
+}
+
+void stop_dac_output(void) {
+	DMA_HandleTypeDef *dma_handle = hdac1.DMA_Handle1;
+	HAL_DMA_Abort(dma_handle);
 }
