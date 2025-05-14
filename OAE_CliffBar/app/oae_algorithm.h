@@ -46,6 +46,13 @@ typedef struct {
     int32_t num_total_tests;
     float32_t oae_accumulator;
     float32_t nf_accumulator;
+    int start_time;		// measure how long the algorithm takes (in msec)
+    int time1;
+    int time2;
+    int time3;
+    int time4;
+    int time5;
+
 } oae_data_t;
 
 

@@ -5,13 +5,13 @@
  *      Author: benjipugh
  */
 
-
+#include "stm32l4xx_hal.h"
 #include "oae_algorithm.h"
 #include <stdlib.h>
 #include <arm_math.h>
 #include <stdbool.h>
 
-oae_data_t* setup_oae_data(){
+oae_data_t* setup_oae_data(void) {
     /* Creates a struct that holds the necessary overhead for the fft and
     windowing, as well as initializing the struct's values for test results.
     In practice it may make sense to not use this function and just do all of
@@ -46,18 +46,26 @@ void oae_algorithm(oae_data_t *oae_data, int32_t* sample_buffer) {
     float32_t * fft_output_dB = fft_output;
     float32_t average_noise_floor;
 
+    oae_data->start_time = HAL_GetTick();
     
     ADCbuff_to_float32(sample_buffer, converted_buffer, FFT_BUFFER_SIZE);
 
     arm_mult_f32(oae_data->window_lut, converted_buffer, windowed_buffer, FFT_BUFFER_SIZE);
-    
+
+
     arm_rfft_fast_f32(&(oae_data->fft), converted_buffer, fft_output, 0);
-    
+
+    oae_data->time1 = HAL_GetTick();
+
     // Convert to fft magnitudes
     arm_cmplx_mag_f32(fft_output+1, fft_output_abs, FFT_BUFFER_SIZE-2); // Since the FFT outputs 
+    oae_data->time2 = HAL_GetTick();
     // Convert to dB. This is sort of a worst case scenario since this is performing log on the entire set of samples
     arm_vlog_f32(fft_output_abs, fft_output_dB, FFT_BUFFER_SIZE/2);
+    oae_data->time3 = HAL_GetTick();
     arm_scale_f32(fft_output_dB, SCALE_DB, fft_output_dB, FFT_BUFFER_SIZE/2);
+
+    oae_data->time4 = HAL_GetTick();
 
     // There will be a more elegant way to execute this
     for (int i = 5; i<NUM_NF_VALS/2; i++) {
@@ -66,6 +74,8 @@ void oae_algorithm(oae_data_t *oae_data, int32_t* sample_buffer) {
     for (int i = -NUM_NF_VALS/2-5; i< (-NUM_NF_VALS/2); i++) {
         average_noise_floor = fft_output_dB[FFT_OAE_IDX + i];
     }
+
+    oae_data->time5 = HAL_GetTick();
 
     if (average_noise_floor > NF_MAXIMUM) {
         return;
