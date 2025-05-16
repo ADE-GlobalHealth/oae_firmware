@@ -17,8 +17,8 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <app_main.h>
 #include "main.h"
+#include "app_main.h"
 #include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/

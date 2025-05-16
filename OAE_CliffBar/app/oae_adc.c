@@ -19,12 +19,20 @@ void init_adc(void) {
 	tlv_sleep(DISABLED);
 }
 
-// TODO: these ideally should not be global variables
-volatile uint32_t data_i2s_0[BUFFER_SIZE];
-volatile uint32_t data_i2s_1[BUFFER_SIZE];
 
-void start_dma_adc_input(void) {
-	HAL_SAI_Receive_DMA(&hsai_BlockA2, (uint8_t*) data_i2s_0, BUFFER_SIZE);
+void dma_adc_input(int32_t* data_buffer) {
+	HAL_SAI_Receive_DMA(&hsai_BlockA2, (uint8_t*) data_buffer, sizeof(*data_buffer));
 }
 
-//todo: write function or modify the above to only collect 4096 samples
+
+/**
+ * DMA full callback - called when DMA is full. This ensures the SAI stops when
+ * the DMA is full.
+ *
+ * TODO: If ping-pong buffers are truly needed, these functions should change or
+ * additional functions should be added to handle data flow from the ADC to the
+ * DMA with two distinct buffers.
+ */
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
+    HAL_SAI_DMAStop(hsai);
+}

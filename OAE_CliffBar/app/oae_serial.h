@@ -124,6 +124,7 @@ typedef struct {
 typedef enum {
     ACTION_NONE 		= 0,
 	ACTION_OAE_TEST 	= 1,		// Run the OAE test once (does not require a stop command)
+	ACTION_ADC_SAMPLES  = 2,        // Enable DAC output and collect a buffer of ADC samples (does not require a stop command)
 } ActionCommand_t;
 
 void oae_serial_init(void);

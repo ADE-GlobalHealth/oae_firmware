@@ -79,7 +79,9 @@ bool oae_start_command(ActionCommand_t action)
 		case ACTION_OAE_TEST:
 			oae_algorithm_test();
 			break;
-
+		case ACTION_ADC_SAMPLES:
+			;
+			break;
 		default:
 			return false;	// invalid action command
 			break;
