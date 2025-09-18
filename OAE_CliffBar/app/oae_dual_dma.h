@@ -5,8 +5,8 @@
  *      Author: veswaranandam
  */
 
-#ifndef DUAL_DMA_H_
-#define DUAL_DMA_H_
+#ifndef OAE_DUAL_DMA_H_
+#define OAE_DUAL_DMA_H_
 
 #include "stm32l4xx_hal.h"
 
@@ -15,4 +15,4 @@
 HAL_StatusTypeDef HAL_DAC_Start_DualDMA(DAC_HandleTypeDef *, uint32_t, uint32_t *, uint32_t, uint32_t);
 
 
-#endif /* DUAL_DMA_H_ */
+#endif /* OAE_DUAL_DMA_H_ */

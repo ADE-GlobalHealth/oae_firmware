@@ -5,7 +5,7 @@
  *      Author: veswaranandam
  */
 
-#include <dual_dma.h>
+#include <oae_dual_dma.h>
 
 // See: https://community.st.com/t5/stm32-mcu-products/can-stm32cube-configure-the-dac-in-synchronous-dual-mode-with/td-p/469433
 // And: https://community.st.com/t5/stm32-mcu-products/how-to-use-two-dac-channels-simultaneously/td-p/210588

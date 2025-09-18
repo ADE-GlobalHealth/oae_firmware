@@ -8,10 +8,13 @@
  *
  */
 
+#include "stm32l4xx_hal.h"
 #include "usbd_cdc_if.h"
 #include "main.h"
 #include "oae_serial.h"
 #include "oae_algorithm.h"
+
+extern I2C_HandleTypeDef hi2c3;
 
 SerialStats_t SerStats;
 SerialPacket_t RxPacket;
@@ -525,12 +528,12 @@ void oae_process_rx_packet(void)
 				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
-				uint8_t i2c_devaddr = RxPacket.payload[0];
-				uint8_t i2c_regaddr = RxPacket.payload[1];
-
+				uint8_t i2c_device_address = RxPacket.payload[0];
+				uint8_t i2c_register_address = RxPacket.payload[1];
 				uint8_t i2c_rd_data;
 
-				r((uint16_t) i2c_devaddr, (uint16_t) i2c_regaddr, (uint8_t *) &i2c_rd_data);
+				HAL_I2C_Mem_Read(&hi2c3, i2c_device_address,
+						i2c_register_address, 1, &i2c_rd_data, 1, HAL_MAX_DELAY);
 				TxBuffer[0] = i2c_rd_data;
 			    oae_serial_send(RSP_U8, 1, (uint8_t *) TxBuffer);
 			}
@@ -542,11 +545,12 @@ void oae_process_rx_packet(void)
 			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
 			}
 			else {
-				uint8_t i2c_devaddr = RxPacket.payload[0];
-				uint8_t i2c_regaddr = RxPacket.payload[1];
+				uint8_t i2c_device_address = RxPacket.payload[0];
+				uint8_t i2c_register_address = RxPacket.payload[1];
 				uint8_t i2c_wr_data = RxPacket.payload[2];
 
-				w((uint16_t) i2c_devaddr, (uint16_t) i2c_regaddr, i2c_wr_data);
+				HAL_I2C_Mem_Write(&hi2c3, i2c_device_address,
+						i2c_register_address, 1, &i2c_wr_data, 1, HAL_MAX_DELAY);
 				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
 			}
 			break;
