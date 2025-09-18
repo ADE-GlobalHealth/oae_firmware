@@ -65,3 +65,5 @@ oae_venv/
 .pytest_cache/
 .python-version
 __pycache__/
+*.egg-info
+
