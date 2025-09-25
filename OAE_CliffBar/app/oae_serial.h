@@ -133,7 +133,7 @@ void oae_fill_test_buffer(BufferDataType_t BufType);
 
 uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf);
 uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, uint8_t *payload_buf);
-bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *payload);
+bool oae_serial_send(PacketResponse_t response, uint8_t payload_size, uint8_t *payload);
 bool oae_serial_send_error(char *error_str);
 bool oae_serial_send_buffer(BufferDataType_t BufType);
 

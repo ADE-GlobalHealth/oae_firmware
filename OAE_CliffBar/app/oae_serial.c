@@ -294,7 +294,7 @@ uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, u
 
 // This creates a transmit packet and blocks until the data has finished sending.
 // Returns true if an error occurred.
-bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *payload)
+bool oae_serial_send(PacketResponse_t response, uint8_t payload_size, uint8_t *payload)
 {
 	uint8_t tx_packet_buf[SER_MAX_PACKET_LEN];
     uint8_t checksum = 0;
@@ -309,7 +309,7 @@ bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *pay
     else SerStats.tx_packet_count++;
 
     tx_packet_buf[index++] = (uint8_t) SER_PACKET_HEADER;
-    tx_packet_buf[index++] = (uint8_t) command;
+    tx_packet_buf[index++] = (uint8_t) response;
     tx_packet_buf[index++] = (uint8_t) payload_size;
     for (i = 0; i< payload_size; i++) tx_packet_buf[index++] = (uint8_t) payload[i];
 
