@@ -3,12 +3,17 @@
 #include <stdbool.h>
 
 #include "oae_serial.h"
-#include "usbd_cdc_if.h"
 #include "oae_adc.h"
 #include "oae_dac.h"
 #include "oae_led.h"
+#include "ulog.h"
+#include "usbd_cdc_if.h"
 
 void app_setup() {
+  // Set up logging
+  ULOG_INIT();
+  ULOG_SUBSCRIBE(oae_serial_log, ULOG_DEBUG_LEVEL);
+
 	// Initialize oae serial protocol
 	oae_serial_init();
 

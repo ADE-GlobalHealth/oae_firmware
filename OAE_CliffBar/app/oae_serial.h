@@ -28,6 +28,8 @@ extern "C" {
 
 #include <stdbool.h>
 
+#include "ulog.h"
+
 #define SER_MAX_PACKET_LEN 254
 #define SER_MAX_PAYLOAD_LEN 250
 
@@ -93,18 +95,24 @@ typedef enum {
 
 // OAE Embedded device responses:
 typedef enum  {
-    RSP_PING 			= 101,		// Ping response, no payload
-    RSP_ACK 			= 102,		// No payload
-    RSP_NAK 			= 103,		// No payload
-    RSP_ERR 			= 104,		// Payload: Up to 250 bytes, text string
-    RSP_TEXT 			= 105,		// Payload: Up to 250 bytes, text string
-	RSP_BUF_START 		= 106,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer
-	RSP_BUF 			= 107,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data.
-	RSP_BUF_END			= 108,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer
-    RSP_U8 				= 109,		// Payload: 1 byte:  U8
-    RSP_U32 			= 110,		// Payload: 4 bytes: U32
-	RSP_EVENT			= 111,		// Payload: 1 byte:  U8 (event number)
-    RSP_INVALID 		= 112,		// No payload (Command from host was not recognized)
+  RSP_HEARTBEAT = 0,    // Heartbeat response, no payload
+	RSP_PING 			= 1,		// Ping response, no payload
+	RSP_ACK 			= 2,		// No payload
+	RSP_NAK 			= 3,		// No payload
+	RSP_ERR 			= 4,		// Payload: Up to 250 bytes, text string
+	RSP_TEXT 			= 5,		// Payload: Up to 250 bytes, text string
+	RSP_BUF_START 		= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer
+	RSP_BUF 			= 7,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data.
+	RSP_BUF_END			= 8,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer
+	RSP_U8 				= 9,		// Payload: 1 byte:  U8
+	RSP_U32 			= 10,		// Payload: 4 bytes: U32
+	RSP_EVENT			= 11,		// Payload: 1 byte:  U8 (event number)
+	RSP_INVALID 		= 12,		// No payload (Command from host was not recognized)
+	RSP_LOG_DEBUG       = 13,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_INFO        = 14,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_WARNING     = 15,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_ERROR       = 16,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_CRITICAL    = 17,      // Payload: Up to 250 bytes, text string
 } PacketResponse_t;
 
 typedef struct {
@@ -136,6 +144,7 @@ uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, u
 bool oae_serial_send(PacketResponse_t response, uint8_t payload_size, uint8_t *payload);
 bool oae_serial_send_error(char *error_str);
 bool oae_serial_send_buffer(BufferDataType_t BufType);
+bool oae_serial_log(ulog_level_t severity, char *log_str);
 
 bool oae_serial_receive(uint8_t rx_char);
 void oae_process_rx_packet(void);

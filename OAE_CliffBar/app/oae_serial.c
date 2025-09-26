@@ -13,6 +13,7 @@
 #include "main.h"
 #include "oae_serial.h"
 #include "oae_algorithm.h"
+#include "ulog.h"
 
 extern I2C_HandleTypeDef hi2c3;
 
@@ -365,6 +366,36 @@ bool oae_serial_send_buffer(BufferDataType_t BufType)
 	oae_serial_send(RSP_BUF_END, buf_len, (uint8_t *) TxBuffer);
 
 	return true;
+}
+
+bool oae_serial_log(ulog_level_t severity, char *log_str)
+{
+  uint8_t TxBuffer[SER_MAX_PAYLOAD_LEN];
+  uint8_t buf_len = sprintf((char *)TxBuffer, log_str);
+
+  PacketResponse_t logging_level;
+
+  switch(severity){
+    case ULOG_DEBUG_LEVEL:
+      logging_level = RSP_LOG_DEBUG;
+      break;
+    case ULOG_INFO_LEVEL:
+      logging_level = RSP_LOG_INFO;
+      break;
+    case ULOG_WARNING_LEVEL:
+      logging_level = RSP_LOG_WARNING;
+      break;
+    case ULOG_ERROR_LEVEL:
+      logging_level = RSP_LOG_ERROR;
+      break;
+    case ULOG_CRITICAL_LEVEL:
+      logging_level = RSP_LOG_CRITICAL;
+      break;
+    default:
+      logging_level = RSP_LOG_INFO;
+  }
+
+  return oae_serial_send(logging_level, buf_len, TxBuffer);
 }
 
 // This function is polled by the calling function.
