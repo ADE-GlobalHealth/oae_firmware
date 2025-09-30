@@ -89,6 +89,13 @@ RSP_U8 = 109  # Payload: 1 byte:  U8
 RSP_U32 = 110  # Payload: 4 bytes: U32
 RSP_EVENT = 111  # Payload: 1 byte:  U8 (event number)
 RSP_INVALID = 112  # No payload (Command from host was not recognized)
+RSP_LOG_TRACE = 113  # Payload: Up to 250 bytes, text string
+RSP_LOG_DEBUG = 114  # Payload: Up to 250 bytes, text string
+RSP_LOG_INFO = 115  # Payload: Up to 250 bytes, text string
+RSP_LOG_WARNING = 116  # Payload: Up to 250 bytes, text string
+RSP_LOG_ERROR = 117  # Payload: Up to 250 bytes, text string
+RSP_LOG_CRITICAL = 118  # Payload: Up to 250 bytes, text string
+RSP_LOG_ALWAYS = 119  # Payload: Up to 250 bytes, text string
 
 ACTION_OAE_TEST = 1  # Run the OAE test once (does not require a stop command)
 
@@ -210,6 +217,7 @@ class oae_serial_host:
                     self.process_rx_response()
 
     def command_name(self, command):
+        #TODO (drew): move to an enum
         if command == CMD_NOP:
             return "CMD_NOP"
         elif command == CMD_PING:
@@ -240,7 +248,7 @@ class oae_serial_host:
             return "RSP_ACK"
         elif command == RSP_NAK:
             return "RSP_NAK"
-        elif command == RSP_ERR:
+        elif command == RSP_ERR:  # TODO (drew): move to logging
             return "RSP_ERR"
         elif command == RSP_TEXT:
             return "RSP_TEXT"
@@ -256,8 +264,22 @@ class oae_serial_host:
             return "RSP_BUF"
         elif command == RSP_BUF_END:
             return "RSP_BUF_END"
-        elif command == RSP_INVALID:
+        elif command == RSP_INVALID:  # TODO (drew): move to logging
             return "RSP_INVALID"
+        elif command == RSP_LOG_TRACE:
+            return "RSP_LOG_TRACE"
+        elif command == RSP_LOG_DEBUG:
+            return "RSP_LOG_DEBUG"
+        elif command == RSP_LOG_INFO:
+            return "RSP_LOG_INFO"
+        elif command == RSP_LOG_WARNING:
+            return "RSP_LOG_WARNING"
+        elif command == RSP_LOG_ERROR:
+            return "RSP_LOG_ERROR"
+        elif command == RSP_LOG_CRITICAL:
+            return "RSP_LOG_CRITICAL"
+        elif command == RSP_LOG_ALWAYS:
+            return "RSP_LOG_ALWAYS"
         else:
             return f"INVALID Command {command}"
 
