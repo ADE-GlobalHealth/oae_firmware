@@ -1,6 +1,6 @@
 #MicroXplorer Configuration settings - do not modify
-CAD.formats=
-CAD.pinconfig=
+CAD.formats=[]
+CAD.pinconfig=Dual
 CAD.provider=
 DAC1.DAC_Channel-DAC_OUT2=DAC_CHANNEL_2
 DAC1.DAC_Trigger-DAC_OUT1=DAC_TRIGGER_T6_TRGO
@@ -205,11 +205,11 @@ ProjectManager.ProjectName=OAE_CliffBar
 ProjectManager.ProjectStructure=
 ProjectManager.RegisterCallBack=
 ProjectManager.StackSize=0x400
-ProjectManager.TargetToolchain=STM32CubeIDE
+ProjectManager.TargetToolchain=CMake
 ProjectManager.ToolChainLocation=
 ProjectManager.UAScriptAfterPath=
 ProjectManager.UAScriptBeforePath=
-ProjectManager.UnderRoot=true
+ProjectManager.UnderRoot=false
 ProjectManager.functionlistsort=1-SystemClock_Config-RCC-false-HAL-false,2-MX_GPIO_Init-GPIO-false-HAL-true,3-MX_DMA_Init-DMA-false-HAL-true,4-MX_DAC1_Init-DAC1-false-HAL-true,5-MX_TIM6_Init-TIM6-false-HAL-true,6-MX_I2C3_Init-I2C3-false-HAL-true,7-MX_SAI2_Init-SAI2-false-HAL-true,8-MX_USB_DEVICE_Init-USB_DEVICE-false-HAL-false
 RCC.ADCFreq_Value=48000000
 RCC.AHBFreq_Value=80000000
@@ -315,4 +315,3 @@ VP_TIM6_VS_ClockSourceINT.Signal=TIM6_VS_ClockSourceINT
 VP_USB_DEVICE_VS_USB_DEVICE_CDC_FS.Mode=CDC_FS
 VP_USB_DEVICE_VS_USB_DEVICE_CDC_FS.Signal=USB_DEVICE_VS_USB_DEVICE_CDC_FS
 board=custom
-isbadioc=false
