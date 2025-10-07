@@ -137,7 +137,7 @@ class oae_serial_host:
     RxPayload_u8 = []
     RxPacketIndex = 0
     RxPayloadSize = 0
-    RxCommand: Response
+    RxResponse: Response
     CurrentTxCommand = Command.NOP
     TxCommandsActive = 0
     RxChecksum = 0
@@ -259,9 +259,9 @@ class oae_serial_host:
                 self.RxPacketIndex = 1
             elif self.RxPacketIndex == 1:
                 # self.writeLog(f"\tPacket command: {rx_byte} type: {type(rx_byte)}")
-                self.RxCommand = Response(rx_byte)
+                self.RxResponse = Response(rx_byte)
                 self.RxChecksum += rx_byte
-                # self.writeLog(f"\tRxCommand: {self.RxCommand}")
+                # self.writeLog(f"\tRxResponse: {self.RxResponse}")
                 self.RxPacketIndex += 1
             elif self.RxPacketIndex == 2:
                 self.RxPayloadSize = rx_byte
@@ -278,13 +278,13 @@ class oae_serial_host:
                     self.RxPayload.clear()
                     self.RxPayload_u8.clear()
 
-                if self.RxCommand == Response.U8:
+                if self.RxResponse == Response.U8:
                     self.RxPayload_u8.append(rx_byte)
-                elif self.RxCommand == Response.BUF_START:
+                elif self.RxResponse == Response.BUF_START:
                     self.RxPayload_u8.append(rx_byte)
-                elif self.RxCommand == Response.BUF:
+                elif self.RxResponse == Response.BUF:
                     self.RxPayload_u8.append(rx_byte)
-                elif self.RxCommand == Response.BUF_END:
+                elif self.RxResponse == Response.BUF_END:
                     self.RxPayload_u8.append(rx_byte)
                 elif rx_byte != 0x0:  # don't save null characters
                     self.RxPayload.append(chr(rx_byte))
@@ -297,7 +297,7 @@ class oae_serial_host:
                     self.RxPacketIndex = 0
                 else:
                     self.writeLog(
-                        f"Received invalid packet: RxCommand: {self.RxCommand} RxPayloadSize: {self.RxPayloadSize} computed checksum: {self.RxChecksum}"
+                        f"Received invalid packet: RxResponse: {self.RxResponse} RxPayloadSize: {self.RxPayloadSize} computed checksum: {self.RxChecksum}"
                     )
                     self.RxPacketIndex = 0
             #    host_logger.debug(f"\tRx invalid byte: {hex(rx_byte)} {chr(rx_byte)}")
@@ -321,7 +321,7 @@ class oae_serial_host:
         self.RoundTripTime = int((self.RspTime - self.CmdTime) * 1e6)
 
         if self.RxPayloadSize > 0:
-            if self.RxCommand == Response.U32:
+            if self.RxResponse == Response.U32:
                 data_u32 = self.RxPayload_u8[0]
                 self.RxData_u8[0] = self.RxPayload_u8[0]
                 for j in range(3):
@@ -331,19 +331,19 @@ class oae_serial_host:
                 self.RxDataValid = True
                 if self.RxSilent == False:
                     self.writeLog(
-                        f"\t{self.RxCommand} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"\t{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
-            elif self.RxCommand == Response.U8:
+            elif self.RxResponse == Response.U8:
                 Data = self.RxPayload_u8[0]
                 self.writeLog(
-                    f"\t{self.RxCommand} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
+                    f"\t{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
                 )
-            elif self.RxCommand == Response.EVENT:
+            elif self.RxResponse == Response.EVENT:
                 EventNumber = self.RxPayload_u8[0]
                 self.writeLog(
-                    f"\t{self.RxCommand} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
+                    f"\t{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
                 )
-            elif self.RxCommand == Response.BUF_START:
+            elif self.RxResponse == Response.BUF_START:
                 self.Buffer_PacketCount = 1
                 self.RxAudioBufferStartTime = time.perf_counter()
                 self.RxAudioBuffer = []
@@ -352,13 +352,13 @@ class oae_serial_host:
                 )
                 if self.RxSilent == False:
                     self.writeLog(
-                        f"\t{self.RxCommand} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"\t{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
 
                 self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
                 self.process_rx_buffer_payload()
 
-            elif self.RxCommand == Response.BUF:
+            elif self.RxResponse == Response.BUF:
                 self.Buffer_PacketCount += 1
                 self.Buffer_SamplesReceived = int(
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
@@ -366,7 +366,7 @@ class oae_serial_host:
                 self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
                 self.process_rx_buffer_payload()
 
-            elif self.RxCommand == Response.BUF_END:
+            elif self.RxResponse == Response.BUF_END:
                 self.Buffer_PacketCount += 1
                 self.Buffer_SamplesReceived = int(
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
@@ -376,7 +376,7 @@ class oae_serial_host:
                 if self.RxSilent == False:
                     elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
                     self.writeLog(
-                        f"\t{self.RxCommand} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
+                        f"\t{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
                     )
                     if False:  # debug packet timing
                         for i in range(len(self.RxPacketTimes)):
@@ -391,23 +391,23 @@ class oae_serial_host:
                 self.save_audio_buffer(self.RxAudioBuffer)
 
             else:
-                if self.RxCommand == Response.ERR:
+                if self.RxResponse == Response.ERR:
                     if self.TxCommandsActive > 0:
                         self.TxCommandsActive -= 1
 
                 payloadStr = "".join(self.RxPayload)
-                self.writeLog(f"\t{self.RxCommand} {payloadStr}")
+                self.writeLog(f"\t{self.RxResponse} {payloadStr}")
                 self.writeLog(
                     f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                 )
         else:
-            if self.RxCommand == Response.ACK:
+            if self.RxResponse == Response.ACK:
                 if self.TxCommandsActive > 0:
                     self.TxCommandsActive -= 1
 
             if self.CurrentTxCommand != Command.BUF:
                 self.writeLog(
-                    f"\t{self.RxCommand} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
+                    f"\t{self.RxResponse} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
                 )
 
         self.ValidRXPacket = False
