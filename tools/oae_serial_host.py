@@ -26,6 +26,7 @@ from time import sleep
 import serial
 import serial.tools.list_ports as port_list
 import numpy as np
+from enum import IntEnum
 
 OAE_SERIAL_PROTOCOL_VERSION = "v1.3"
 
@@ -60,44 +61,71 @@ U24_PACKETS_PER_BUFFER = SERIAL_BUFFER_MAX_SIZE / U24_SAMPLES_PER_PACKET
 F32_PACKETS_PER_BUFFER = SERIAL_BUFFER_MAX_SIZE / F32_SAMPLES_PER_PACKET
 S32_PACKETS_PER_BUFFER = SERIAL_BUFFER_MAX_SIZE / S32_SAMPLES_PER_PACKET
 
-# Host commands:
-CMD_NOP = 0  # No payload, no response expected
-CMD_PING = 1  # Ping, no payload, RSP_PING response expected
-CMD_STATUS = (
-    2  # Request status from OAE, no payload, multiple RSP_TEXT responses expected
-)
-CMD_BUF_REQ = 3  # Payload: 1 byte: BUF_TYPE
-CMD_BUF_START = 4  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
-CMD_BUF = 5  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
-CMD_BUF_END = 6  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
-CMD_I2C_RD = 7  # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
-CMD_I2C_WR = 8  # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
-CMD_START = 9  # Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
-CMD_STOP = 10  # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
-CMD_OK = 11  # No payload
 
-# OAE Embedded device responses:
-RSP_PING = 101  # Ping response, no payload
-RSP_ACK = 102  # No payload
-RSP_NAK = 103  # No payload
-RSP_ERR = 104  # Payload: Up to 250 bytes, text string
-RSP_TEXT = 105  # Payload: Up to 250 bytes, text string
-RSP_BUF_START = 106  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer
-RSP_BUF = 107  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data.
-RSP_BUF_END = 108  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer
-RSP_U8 = 109  # Payload: 1 byte:  U8
-RSP_U32 = 110  # Payload: 4 bytes: U32
-RSP_EVENT = 111  # Payload: 1 byte:  U8 (event number)
-RSP_INVALID = 112  # No payload (Command from host was not recognized)
-RSP_LOG_TRACE = 113  # Payload: Up to 250 bytes, text string
-RSP_LOG_DEBUG = 114  # Payload: Up to 250 bytes, text string
-RSP_LOG_INFO = 115  # Payload: Up to 250 bytes, text string
-RSP_LOG_WARNING = 116  # Payload: Up to 250 bytes, text string
-RSP_LOG_ERROR = 117  # Payload: Up to 250 bytes, text string
-RSP_LOG_CRITICAL = 118  # Payload: Up to 250 bytes, text string
-RSP_LOG_ALWAYS = 119  # Payload: Up to 250 bytes, text string
+class Command(IntEnum):
+    """
+    Host commands.
 
-ACTION_OAE_TEST = 1  # Run the OAE test once (does not require a stop command)
+    Host commands flow from the host computer to the OAE embedded device.
+    """
+
+    def __str__(self):
+        return "CMD_" + self.name
+
+    NOP = 0  # No payload, no response expected
+    PING = 1  # Ping, no payload, RSP_PING response expected
+    STATUS = (
+        2  # Request status from OAE, no payload, multiple RSP_TEXT responses expected
+    )
+    BUF_REQ = 3  # Payload: 1 byte: BUF_TYPE
+    BUF_START = 4  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
+    BUF = 5  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
+    BUF_END = 6  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
+    I2C_RD = 7  # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
+    I2C_WR = 8  # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
+    START = 9  # Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
+    STOP = 10  # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
+    OK = 11  # No payload
+
+
+class Response(IntEnum):
+    """
+    OAE device responses.
+
+    Responses flow from the OAE device to the host computer.
+    """
+
+    def __str__(self):
+        return "RSP_" + self.name
+
+    PING = 101  # Ping response, no payload
+    ACK = 102  # No payload
+    NAK = 103  # No payload
+    ERR = 104  # Payload: Up to 250 bytes, text string
+    TEXT = 105  # Payload: Up to 250 bytes, text string
+    BUF_START = 106  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer
+    BUF = 107  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data.
+    BUF_END = 108  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer
+    U8 = 109  # Payload: 1 byte:  U8
+    U32 = 110  # Payload: 4 bytes: U32
+    EVENT = 111  # Payload: 1 byte:  U8 (event number)
+    INVALID = 112  # No payload (Command from host was not recognized)
+    LOG_DEBUG = 113  # Payload: Up to 250 bytes, text string
+    LOG_INFO = 114  # Payload: Up to 250 bytes, text string
+    LOG_WARNING = 115  # Payload: Up to 250 bytes, text string
+    LOG_ERROR = 116  # Payload: Up to 250 bytes, text string
+    LOG_CRITICAL = 117  # Payload: Up to 250 bytes, text string
+
+
+class Action(IntEnum):
+    """
+    OAE device actions.
+    """
+
+    def __str__(self):
+        return "ACTION_" + self.name
+
+    OAE_TEST = 1  # Run the OAE test once (does not require a stop command)
 
 
 class oae_serial_host:
@@ -109,8 +137,8 @@ class oae_serial_host:
     RxPayload_u8 = []
     RxPacketIndex = 0
     RxPayloadSize = 0
-    RxCommand = 0
-    CurrentTxCommand = CMD_NOP
+    RxCommand: Response
+    CurrentTxCommand = Command.NOP
     TxCommandsActive = 0
     RxChecksum = 0
     ValidRXPacket = False
@@ -216,73 +244,6 @@ class oae_serial_host:
                     self.RxPacketTimes.append(time.perf_counter())
                     self.process_rx_response()
 
-    def command_name(self, command):
-        #TODO (drew): move to an enum
-        if command == CMD_NOP:
-            return "CMD_NOP"
-        elif command == CMD_PING:
-            return "CMD_PING"
-        elif command == CMD_STATUS:
-            return "CMD_STATUS"
-        elif command == CMD_BUF_REQ:
-            return "CMD_BUF_REQ"
-        elif command == CMD_BUF_START:
-            return "CMD_BUF_START"
-        elif command == CMD_BUF:
-            return "CMD_BUF"
-        elif command == CMD_BUF_END:
-            return "CMD_BUF_END"
-        elif command == CMD_I2C_RD:
-            return "CMD_I2C_RD"
-        elif command == CMD_I2C_WR:
-            return "CMD_I2C_WR"
-        elif command == CMD_START:
-            return "CMD_START"
-        elif command == CMD_STOP:
-            return "CMD_STOP"
-        elif command == CMD_OK:
-            return "CMD_OK"
-        elif command == RSP_PING:
-            return "RSP_PING"
-        elif command == RSP_ACK:
-            return "RSP_ACK"
-        elif command == RSP_NAK:
-            return "RSP_NAK"
-        elif command == RSP_ERR:  # TODO (drew): move to logging
-            return "RSP_ERR"
-        elif command == RSP_TEXT:
-            return "RSP_TEXT"
-        elif command == RSP_U8:
-            return "RSP_U8"
-        elif command == RSP_U32:
-            return "RSP_U32"
-        elif command == RSP_EVENT:
-            return "RSP_EVENT"
-        elif command == RSP_BUF_START:
-            return "RSP_BUF_START"
-        elif command == RSP_BUF:
-            return "RSP_BUF"
-        elif command == RSP_BUF_END:
-            return "RSP_BUF_END"
-        elif command == RSP_INVALID:  # TODO (drew): move to logging
-            return "RSP_INVALID"
-        elif command == RSP_LOG_TRACE:
-            return "RSP_LOG_TRACE"
-        elif command == RSP_LOG_DEBUG:
-            return "RSP_LOG_DEBUG"
-        elif command == RSP_LOG_INFO:
-            return "RSP_LOG_INFO"
-        elif command == RSP_LOG_WARNING:
-            return "RSP_LOG_WARNING"
-        elif command == RSP_LOG_ERROR:
-            return "RSP_LOG_ERROR"
-        elif command == RSP_LOG_CRITICAL:
-            return "RSP_LOG_CRITICAL"
-        elif command == RSP_LOG_ALWAYS:
-            return "RSP_LOG_ALWAYS"
-        else:
-            return f"INVALID Command {command}"
-
     def build_rx_packet(self):
         if len(self.RxQ) == 0:
             return
@@ -298,7 +259,7 @@ class oae_serial_host:
                 self.RxPacketIndex = 1
             elif self.RxPacketIndex == 1:
                 # self.writeLog(f"\tPacket command: {rx_byte} type: {type(rx_byte)}")
-                self.RxCommand = rx_byte
+                self.RxCommand = Response(rx_byte)
                 self.RxChecksum += rx_byte
                 # self.writeLog(f"\tRxCommand: {self.RxCommand}")
                 self.RxPacketIndex += 1
@@ -317,13 +278,13 @@ class oae_serial_host:
                     self.RxPayload.clear()
                     self.RxPayload_u8.clear()
 
-                if self.RxCommand == RSP_U8:
+                if self.RxCommand == Response.U8:
                     self.RxPayload_u8.append(rx_byte)
-                elif self.RxCommand == RSP_BUF_START:
+                elif self.RxCommand == Response.BUF_START:
                     self.RxPayload_u8.append(rx_byte)
-                elif self.RxCommand == RSP_BUF:
+                elif self.RxCommand == Response.BUF:
                     self.RxPayload_u8.append(rx_byte)
-                elif self.RxCommand == RSP_BUF_END:
+                elif self.RxCommand == Response.BUF_END:
                     self.RxPayload_u8.append(rx_byte)
                 elif rx_byte != 0x0:  # don't save null characters
                     self.RxPayload.append(chr(rx_byte))
@@ -360,7 +321,7 @@ class oae_serial_host:
         self.RoundTripTime = int((self.RspTime - self.CmdTime) * 1e6)
 
         if self.RxPayloadSize > 0:
-            if self.RxCommand == RSP_U32:
+            if self.RxCommand == Response.U32:
                 data_u32 = self.RxPayload_u8[0]
                 self.RxData_u8[0] = self.RxPayload_u8[0]
                 for j in range(3):
@@ -370,19 +331,19 @@ class oae_serial_host:
                 self.RxDataValid = True
                 if self.RxSilent == False:
                     self.writeLog(
-                        f"\t{self.command_name(self.RxCommand)} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"\t{self.RxCommand} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
-            elif self.RxCommand == RSP_U8:
+            elif self.RxCommand == Response.U8:
                 Data = self.RxPayload_u8[0]
                 self.writeLog(
-                    f"\t{self.command_name(self.RxCommand)} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
+                    f"\t{self.RxCommand} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
                 )
-            elif self.RxCommand == RSP_EVENT:
+            elif self.RxCommand == Response.EVENT:
                 EventNumber = self.RxPayload_u8[0]
                 self.writeLog(
-                    f"\t{self.command_name(self.RxCommand)} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
+                    f"\t{self.RxCommand} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
                 )
-            elif self.RxCommand == RSP_BUF_START:
+            elif self.RxCommand == Response.BUF_START:
                 self.Buffer_PacketCount = 1
                 self.RxAudioBufferStartTime = time.perf_counter()
                 self.RxAudioBuffer = []
@@ -391,13 +352,13 @@ class oae_serial_host:
                 )
                 if self.RxSilent == False:
                     self.writeLog(
-                        f"\t{self.command_name(self.RxCommand)} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"\t{self.RxCommand} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
 
                 self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
                 self.process_rx_buffer_payload()
 
-            elif self.RxCommand == RSP_BUF:
+            elif self.RxCommand == Response.BUF:
                 self.Buffer_PacketCount += 1
                 self.Buffer_SamplesReceived = int(
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
@@ -405,7 +366,7 @@ class oae_serial_host:
                 self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
                 self.process_rx_buffer_payload()
 
-            elif self.RxCommand == RSP_BUF_END:
+            elif self.RxCommand == Response.BUF_END:
                 self.Buffer_PacketCount += 1
                 self.Buffer_SamplesReceived = int(
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
@@ -415,7 +376,7 @@ class oae_serial_host:
                 if self.RxSilent == False:
                     elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
                     self.writeLog(
-                        f"\t{self.command_name(self.RxCommand)} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
+                        f"\t{self.RxCommand} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
                     )
                     if False:  # debug packet timing
                         for i in range(len(self.RxPacketTimes)):
@@ -430,23 +391,23 @@ class oae_serial_host:
                 self.save_audio_buffer(self.RxAudioBuffer)
 
             else:
-                if self.RxCommand == RSP_ERR:
+                if self.RxCommand == Response.ERR:
                     if self.TxCommandsActive > 0:
                         self.TxCommandsActive -= 1
 
                 payloadStr = "".join(self.RxPayload)
-                self.writeLog(f"\t{self.command_name(self.RxCommand)} {payloadStr}")
+                self.writeLog(f"\t{self.RxCommand} {payloadStr}")
                 self.writeLog(
                     f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                 )
         else:
-            if self.RxCommand == RSP_ACK:
+            if self.RxCommand == Response.ACK:
                 if self.TxCommandsActive > 0:
                     self.TxCommandsActive -= 1
 
-            if self.CurrentTxCommand != CMD_BUF:
+            if self.CurrentTxCommand != Command.BUF:
                 self.writeLog(
-                    f"\t{self.command_name(self.RxCommand)} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
+                    f"\t{self.RxCommand} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
                 )
 
         self.ValidRXPacket = False
@@ -456,8 +417,8 @@ class oae_serial_host:
         TxPacket = []
         Checksum = 0
         self.CurrentTxCommand = TxCommand
-        if TxCommand != CMD_BUF:
-            self.writeLog(f"send_TxPacket: {self.command_name(TxCommand)}")
+        if TxCommand != Command.BUF:
+            self.writeLog(f"send_TxPacket: {TxCommand}")
         TxPacket.append(PACKET_HEADER_BYTE)
         Checksum += PACKET_HEADER_BYTE
         TxPacket.append(TxCommand)
@@ -506,7 +467,7 @@ class oae_serial_host:
         SampleIndex = 0
         TxAudioBufferStartTime = time.perf_counter()
         self.writeLog(f"\tCMD_BUF_START time: {TxAudioBufferStartTime}")
-        self.upload_buffer_packet(CMD_BUF_START, TxAudioBuf, SampleIndex)
+        self.upload_buffer_packet(Command.BUF_START, TxAudioBuf, SampleIndex)
         self.TxCommandsActive += 1
         SampleIndex += U24_SAMPLES_PER_PACKET
 
@@ -519,7 +480,7 @@ class oae_serial_host:
                 else:
                     sleep(0.001)
 
-            self.upload_buffer_packet(CMD_BUF, TxAudioBuf, SampleIndex)
+            self.upload_buffer_packet(Command.BUF, TxAudioBuf, SampleIndex)
             self.TxCommandsActive += 1
             SampleIndex += U24_SAMPLES_PER_PACKET
 
@@ -531,7 +492,7 @@ class oae_serial_host:
             else:
                 sleep(0.001)
 
-        self.upload_buffer_packet(CMD_BUF_END, TxAudioBuf, SampleIndex)
+        self.upload_buffer_packet(Command.BUF_END, TxAudioBuf, SampleIndex)
         self.TxCommandsActive += 1
         SampleIndex += U24_SAMPLES_PER_PACKET
 
@@ -551,24 +512,24 @@ class oae_serial_host:
         TxPayload = []
         TxPayload.append(device_addr)
         TxPayload.append(device_register_addr)
-        self.send_TxPacket(CMD_I2C_RD, TxPayload)
+        self.send_TxPacket(Command.I2C_RD, TxPayload)
 
     def i2c_wr(self, device_addr, device_register_addr, i2c_wr_data):
         TxPayload = []
         TxPayload.append(device_addr)
         TxPayload.append(device_register_addr)
         TxPayload.append(i2c_wr_data)
-        self.send_TxPacket(CMD_I2C_WR, TxPayload)
+        self.send_TxPacket(Command.I2C_WR, TxPayload)
 
     def command_response(self, command, TxPayload=None):
         EmptyPayload = []
-        if command == CMD_BUF_REQ:
+        if command == Command.BUF_REQ:
             TxPayload = []
             TxPayload.append(BUF_TYPE_U24)
             self.RxPacketTimes = []
-            self.send_TxPacket(CMD_BUF_REQ, TxPayload)
+            self.send_TxPacket(Command.BUF_REQ, TxPayload)
             self.writeLog(f"\tCMD_BUF_REQ time: {time.perf_counter()}")
-        elif command == CMD_BUF_START:
+        elif command == Command.BUF_START:
             self.upload_test_buffer()
         else:
             if TxPayload == None:
@@ -597,31 +558,31 @@ class oae_serial_host:
             if len(user_input) == 0:
                 continue
             elif user_input[0] == "1":
-                self.command_response(CMD_PING)
+                self.command_response(Command.PING)
             elif user_input[0] == "2":
-                self.command_response(CMD_STATUS)
+                self.command_response(Command.STATUS)
             elif user_input[0] == "3":
-                self.command_response(CMD_BUF_START)
+                self.command_response(Command.BUF_START)
             elif user_input[0] == "4":
                 BufferNum = 0
                 TxPayload = []
                 TxPayload.append(BufferNum)
-                self.command_response(CMD_BUF_REQ, TxPayload)
+                self.command_response(Command.BUF_REQ, TxPayload)
             elif user_input[0] == "5":
                 BufferNum = 1
                 TxPayload = []
                 TxPayload.append(BufferNum)
-                self.command_response(CMD_BUF_REQ, TxPayload)
+                self.command_response(Command.BUF_REQ, TxPayload)
             elif user_input[0] == "6":
-                CommandNum = ACTION_OAE_TEST
+                CommandNum = Action.OAE_TEST
                 TxPayload = []
                 TxPayload.append(CommandNum)
-                self.command_response(CMD_START, TxPayload)
+                self.command_response(Command.START, TxPayload)
             elif user_input[0] == "7":
                 CommandNum = 0
                 TxPayload = []
                 TxPayload.append(CommandNum)
-                self.command_response(CMD_STOP, TxPayload)
+                self.command_response(Command.STOP, TxPayload)
             elif user_input[0] == "8":
                 self.i2c_rd(device_addr=0x9C, device_register_addr=0x70)
             elif user_input[0] == "9":
