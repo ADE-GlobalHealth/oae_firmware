@@ -1,0 +1,32 @@
+
+name: Python Linter & Style Checker
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main] 
+    paths:
+      - '**.py'
+
+
+jobs:
+  pylint:
+    name: Run pylint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Run pylint
+        run: uv run pylint *.py
+
+
+
