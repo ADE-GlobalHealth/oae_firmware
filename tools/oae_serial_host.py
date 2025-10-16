@@ -83,9 +83,10 @@ class Command(IntEnum):
     BUF_END = 6  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
     I2C_RD = 7  # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
     I2C_WR = 8  # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
-    START = 9  # Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
+    # START = 9  # Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected #TODO (drew): remove on embedded side and here
     STOP = 10  # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
     OK = 11  # No payload
+    OAE_TEST = 12  # Run the OAE test once (does not require a stop command)
 
 
 class Response(IntEnum):
@@ -115,17 +116,6 @@ class Response(IntEnum):
     LOG_WARNING = 115  # Payload: Up to 250 bytes, text string
     LOG_ERROR = 116  # Payload: Up to 250 bytes, text string
     LOG_CRITICAL = 117  # Payload: Up to 250 bytes, text string
-
-
-class Action(IntEnum):
-    """
-    OAE device actions.
-    """
-
-    def __str__(self):
-        return "ACTION_" + self.name
-
-    OAE_TEST = 1  # Run the OAE test once (does not require a stop command)
 
 
 class oae_serial_host:
@@ -544,10 +534,9 @@ class oae_serial_host:
         self.writeLog("\t3) \tCMD_BUF Upload (host test pattern)")
         self.writeLog("\t4) \tCMD_BUF Request 0 (oae test pattern)")
         self.writeLog("\t5) \tCMD_BUF Request 1 (current oae buffer)")
-        self.writeLog("\t6) \tCMD_START ACTION_OAE_TEST")
-        self.writeLog("\t7) \tCMD_STOP ")
-        self.writeLog("\t8) \tCMD_I2C_RD ")
-        self.writeLog("\t9) \tCMD_I2C_WR ")
+        self.writeLog("\t6) \tCMD_STOP ")
+        self.writeLog("\t7) \tCMD_I2C_RD ")
+        self.writeLog("\t8) \tCMD_I2C_WR ")
         self.writeLog("\t? or h) Print this menu")
         self.writeLog("\tq) \tQuit")
 
@@ -574,18 +563,13 @@ class oae_serial_host:
                 TxPayload.append(BufferNum)
                 self.command_response(Command.BUF_REQ, TxPayload)
             elif user_input[0] == "6":
-                CommandNum = Action.OAE_TEST
-                TxPayload = []
-                TxPayload.append(CommandNum)
-                self.command_response(Command.START, TxPayload)
-            elif user_input[0] == "7":
                 CommandNum = 0
                 TxPayload = []
                 TxPayload.append(CommandNum)
                 self.command_response(Command.STOP, TxPayload)
-            elif user_input[0] == "8":
+            elif user_input[0] == "7":
                 self.i2c_rd(device_addr=0x9C, device_register_addr=0x70)
-            elif user_input[0] == "9":
+            elif user_input[0] == "8":
                 self.i2c_wr(
                     device_addr=0x9C, device_register_addr=0x70, i2c_wr_data=0x75
                 )

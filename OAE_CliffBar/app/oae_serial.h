@@ -88,9 +88,8 @@ typedef enum {
 	CMD_BUF_END 		= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
 	CMD_I2C_RD		 	= 7,		// Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
 	CMD_I2C_WR			= 8,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
-	CMD_START			= 9, 		// Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
-	CMD_STOP			= 10,		// Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
-    CMD_OK 				= 11,		// No payload
+	CMD_STOP			= 9,		// Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
+	CMD_OK 				= 10,		// No payload
 } PacketCommand_t;
 
 // OAE Embedded device responses:
@@ -127,16 +126,8 @@ typedef struct {
     int command_turnaround_time;
 } SerialStats_t;
 
-
-// Action commands:
-typedef enum {
-    ACTION_NONE 		= 0,
-	ACTION_OAE_TEST 	= 1,		// Run the OAE test once (does not require a stop command)
-} ActionCommand_t;
-
 void oae_serial_init(void);
-bool oae_start_command(ActionCommand_t action);
-bool oae_stop_command(ActionCommand_t action);
+bool oae_stop_command(PacketCommand_t command);
 void oae_fill_test_buffer(BufferDataType_t BufType);
 
 uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf);

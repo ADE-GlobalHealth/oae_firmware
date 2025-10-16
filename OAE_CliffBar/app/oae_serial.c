@@ -72,24 +72,7 @@ bool oae_algorithm_test(void)
 	return true;
 }
 
-bool oae_start_command(ActionCommand_t action)
-{
-	// Start the selected action:
-	switch(action)
-	{
-		case ACTION_OAE_TEST:
-			oae_algorithm_test();
-			break;
-
-		default:
-			return false;	// invalid action command
-			break;
-	}
-
-	return true;
-}
-
-bool oae_stop_command(ActionCommand_t action)
+bool oae_stop_command(PacketCommand_t command)
 {
 	// add stop commands here
 	return true;
@@ -486,22 +469,12 @@ void oae_process_rx_packet(void)
 		case CMD_PING:
 			oae_serial_send(RSP_PING, 0, (uint8_t *) TxBuffer);
 			break;
-		case CMD_START:
-			if (RxPacket.payload_size != 1) {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			else {
-				ret = oae_start_command((ActionCommand_t) RxPacket.payload[0]);
-				if (ret == true) oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-				else oae_serial_send(RSP_NAK, 0, (uint8_t *) TxBuffer);
-			}
-			break;
 		case CMD_STOP:
 			if (RxPacket.payload_size != 1) {
 				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
 			}
 			else {
-				oae_stop_command((ActionCommand_t) RxPacket.payload[0]);
+				oae_stop_command((PacketCommand_t) RxPacket.payload[0]);
 				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
 			}
 			break;
