@@ -559,6 +559,10 @@ void oae_process_rx_packet(void)
 			}
 			break;
 
+      case CMD_OAE_TEST:
+        // TODO: add oae test sequence
+        break;
+
 		default:
 		    oae_serial_send(RSP_INVALID, 0, (uint8_t *) TxBuffer);
 			break;

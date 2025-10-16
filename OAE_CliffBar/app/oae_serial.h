@@ -90,6 +90,7 @@ typedef enum {
 	CMD_I2C_WR			= 8,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
 	CMD_STOP			= 9,		// Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
 	CMD_OK 				= 10,		// No payload
+  CMD_OAE_TEST  = 11,   // No payload
 } PacketCommand_t;
 
 // OAE Embedded device responses:
