@@ -173,7 +173,7 @@ class oae_serial_host:
             self.logfile_open = True
             self.log.write(f"OAE serial host log file: {self.log_file_name}\n")
 
-    def writeLog(self, text):
+    def write_log(self, text):
         if self.ConsolePrint:
             print(text)
         t2 = text + "\n"
@@ -197,16 +197,16 @@ class oae_serial_host:
         """Initialize serial connection."""
         try:
             self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            self.writeLog(f"Connected to {port} at {baudrate} baud.")
+            self.write_log(f"Connected to {port} at {baudrate} baud.")
 
         except serial.SerialException as e:
-            self.writeLog(f"Error: Unable to open port {port} - {e}")
+            self.write_log(f"Error: Unable to open port {port} - {e}")
             sys.exit(1)
 
         # Python thread switch interval defaults to 5msec.
         sys.setswitchinterval(0.001)
         threadSwitchTime = sys.getswitchinterval()
-        self.writeLog(f"threadSwitchTime: {threadSwitchTime}")
+        self.write_log(f"threadSwitchTime: {threadSwitchTime}")
 
         # Start a thread to read from the serial port
         thread = threading.Thread(target=self.read_from_port)
@@ -224,7 +224,7 @@ class oae_serial_host:
                     # if len(byte_data) > 0:
                     unsigned_byte = byte_data[i]
                     # unsigned_byte = int.from_bytes(byte_data, byteorder='big', signed=False) & 0xFF
-                    # self.writeLog(f"read_from_port: {unsigned_byte.hex()}")
+                    # self.write_log(f"read_from_port: {unsigned_byte.hex()}")
                     self.RxQ.append(unsigned_byte)
 
             while len(self.RxQ) > 0:
@@ -240,23 +240,23 @@ class oae_serial_host:
             return  # Wait until the current packet has been processed.
         else:
             rx_byte = self.RxQ.pop(0)
-            # self.writeLog(f"pop: {hex(rx_byte)} RxPacketIndex: {self.RxPacketIndex} ")
+            # self.write_log(f"pop: {hex(rx_byte)} RxPacketIndex: {self.RxPacketIndex} ")
             if (self.RxPacketIndex == 0) & (rx_byte & 0xFF == 0x7E):
                 self.RxChecksum = rx_byte
-                # self.writeLog(f"\tPacket Header: {hex(rx_byte)}  computed checksum: {self.RxChecksum}")
+                # self.write_log(f"\tPacket Header: {hex(rx_byte)}  computed checksum: {self.RxChecksum}")
                 self.RspPktHeaderTime = time.perf_counter()
                 self.RxPacketIndex = 1
             elif self.RxPacketIndex == 1:
-                # self.writeLog(f"\tPacket command: {rx_byte} type: {type(rx_byte)}")
+                # self.write_log(f"\tPacket command: {rx_byte} type: {type(rx_byte)}")
                 self.RxResponse = Response(rx_byte)
                 self.RxChecksum += rx_byte
-                # self.writeLog(f"\tRxResponse: {self.RxResponse}")
+                # self.write_log(f"\tRxResponse: {self.RxResponse}")
                 self.RxPacketIndex += 1
             elif self.RxPacketIndex == 2:
                 self.RxPayloadSize = rx_byte
                 self.RxChecksum += rx_byte
                 # if self.RxPayloadSize > 0:
-                #    self.writeLog(f"\tRxPayloadSize: {self.RxPayloadSize}  computed checksum: {self.RxChecksum}")
+                #    self.write_log(f"\tRxPayloadSize: {self.RxPayloadSize}  computed checksum: {self.RxChecksum}")
                 self.RxPacketIndex += 1
             elif (
                 (self.RxPayloadSize > 0)
@@ -285,7 +285,7 @@ class oae_serial_host:
                     self.PktRxTime = time.perf_counter()
                     self.RxPacketIndex = 0
                 else:
-                    self.writeLog(
+                    self.write_log(
                         f"Received invalid packet: RxResponse: {self.RxResponse} RxPayloadSize: {self.RxPayloadSize} computed checksum: {self.RxChecksum}"
                     )
                     self.RxPacketIndex = 0
@@ -293,7 +293,7 @@ class oae_serial_host:
 
     def process_rx_buffer_payload(self):
         if self.Buffer_SamplesReceived != U24_SAMPLES_PER_PACKET:
-            self.writeLog(
+            self.write_log(
                 f"\tErr: rx_audio_buffer_payload: RxPayloadSize: {self.RxPayloadSize} Buffer_SamplesReceived: {self.Buffer_SamplesReceived} U24_SAMPLES_PER_PACKET: {U24_SAMPLES_PER_PACKET}"
             )
 
@@ -319,17 +319,17 @@ class oae_serial_host:
                     self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
                 self.RxDataValid = True
                 if self.RxSilent == False:
-                    self.writeLog(
+                    self.write_log(
                         f"\t{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
             elif self.RxResponse == Response.U8:
                 Data = self.RxPayload_u8[0]
-                self.writeLog(
+                self.write_log(
                     f"\t{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
                 )
             elif self.RxResponse == Response.EVENT:
                 EventNumber = self.RxPayload_u8[0]
-                self.writeLog(
+                self.write_log(
                     f"\t{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
                 )
             elif self.RxResponse == Response.BUF_START:
@@ -340,7 +340,7 @@ class oae_serial_host:
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
                 )
                 if self.RxSilent == False:
-                    self.writeLog(
+                    self.write_log(
                         f"\t{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
 
@@ -364,17 +364,17 @@ class oae_serial_host:
                 self.process_rx_buffer_payload()
                 if self.RxSilent == False:
                     elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
-                    self.writeLog(
+                    self.write_log(
                         f"\t{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
                     )
                     if False:  # debug packet timing
                         for i in range(len(self.RxPacketTimes)):
                             if i == 0:
-                                self.writeLog(
+                                self.write_log(
                                     f"\t\tpacket {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[0] - self.CmdTime}"
                                 )
                             else:
-                                self.writeLog(
+                                self.write_log(
                                     f"\t\tpacket {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[i] - self.RxPacketTimes[i - 1]}"
                                 )
                 self.save_audio_buffer(self.RxAudioBuffer)
@@ -385,8 +385,8 @@ class oae_serial_host:
                         self.TxCommandsActive -= 1
 
                 payloadStr = "".join(self.RxPayload)
-                self.writeLog(f"\t{self.RxResponse} {payloadStr}")
-                self.writeLog(
+                self.write_log(f"\t{self.RxResponse} {payloadStr}")
+                self.write_log(
                     f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                 )
         else:
@@ -395,7 +395,7 @@ class oae_serial_host:
                     self.TxCommandsActive -= 1
 
             if self.CurrentTxCommand != Command.BUF:
-                self.writeLog(
+                self.write_log(
                     f"\t{self.RxResponse} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
                 )
 
@@ -407,7 +407,7 @@ class oae_serial_host:
         Checksum = 0
         self.CurrentTxCommand = TxCommand
         if TxCommand != Command.BUF:
-            self.writeLog(f"send_TxPacket: {TxCommand}")
+            self.write_log(f"send_TxPacket: {TxCommand}")
         TxPacket.append(PACKET_HEADER_BYTE)
         Checksum += PACKET_HEADER_BYTE
         TxPacket.append(TxCommand)
@@ -455,7 +455,7 @@ class oae_serial_host:
 
         SampleIndex = 0
         TxAudioBufferStartTime = time.perf_counter()
-        self.writeLog(f"\tCMD_BUF_START time: {TxAudioBufferStartTime}")
+        self.write_log(f"\tCMD_BUF_START time: {TxAudioBufferStartTime}")
         self.upload_buffer_packet(Command.BUF_START, TxAudioBuf, SampleIndex)
         self.TxCommandsActive += 1
         SampleIndex += U24_SAMPLES_PER_PACKET
@@ -464,7 +464,7 @@ class oae_serial_host:
             while self.TxCommandsActive > 5:
                 elapsedTime = time.perf_counter() - TxAudioBufferStartTime
                 if elapsedTime > 2.0:
-                    self.writeLog(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
+                    self.write_log(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
                     break
                 else:
                     sleep(0.001)
@@ -476,7 +476,7 @@ class oae_serial_host:
         while self.TxCommandsActive > 0:
             elapsedTime = time.perf_counter() - TxAudioBufferStartTime
             if elapsedTime > 2.0:
-                self.writeLog(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
+                self.write_log(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
                 break
             else:
                 sleep(0.001)
@@ -488,12 +488,12 @@ class oae_serial_host:
         while self.TxCommandsActive > 0:
             elapsedTime = time.perf_counter() - TxAudioBufferStartTime
             if elapsedTime > 2.0:
-                self.writeLog(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
+                self.write_log(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
                 break
             else:
                 sleep(0.001)
 
-        self.writeLog(
+        self.write_log(
             f"\tCMD_BUF_END SampleIndex: {SampleIndex} elapsedTime: {elapsedTime}"
         )
 
@@ -517,7 +517,7 @@ class oae_serial_host:
             TxPayload.append(BUF_TYPE_U24)
             self.RxPacketTimes = []
             self.send_TxPacket(Command.BUF_REQ, TxPayload)
-            self.writeLog(f"\tCMD_BUF_REQ time: {time.perf_counter()}")
+            self.write_log(f"\tCMD_BUF_REQ time: {time.perf_counter()}")
         elif command == Command.BUF_START:
             self.upload_test_buffer()
         else:
@@ -527,17 +527,17 @@ class oae_serial_host:
                 self.send_TxPacket(command, TxPayload)
 
     def print_menu(self):
-        self.writeLog("Menu: ")
-        self.writeLog("\t1) \tCMD_PING ")
-        self.writeLog("\t2) \tCMD_STATUS ")
-        self.writeLog("\t3) \tCMD_BUF Upload (host test pattern)")
-        self.writeLog("\t4) \tCMD_BUF Request 0 (oae test pattern)")
-        self.writeLog("\t5) \tCMD_BUF Request 1 (current oae buffer)")
-        self.writeLog("\t6) \tCMD_STOP ")
-        self.writeLog("\t7) \tCMD_I2C_RD ")
-        self.writeLog("\t8) \tCMD_I2C_WR ")
-        self.writeLog("\t? or h) Print this menu")
-        self.writeLog("\tq) \tQuit")
+        self.write_log("Menu: ")
+        self.write_log("\t1) \tCMD_PING ")
+        self.write_log("\t2) \tCMD_STATUS ")
+        self.write_log("\t3) \tCMD_BUF Upload (host test pattern)")
+        self.write_log("\t4) \tCMD_BUF Request 0 (oae test pattern)")
+        self.write_log("\t5) \tCMD_BUF Request 1 (current oae buffer)")
+        self.write_log("\t6) \tCMD_STOP ")
+        self.write_log("\t7) \tCMD_I2C_RD ")
+        self.write_log("\t8) \tCMD_I2C_WR ")
+        self.write_log("\t? or h) Print this menu")
+        self.write_log("\tq) \tQuit")
 
     def serial_user_interface(self):
         self.print_menu()
@@ -579,7 +579,7 @@ class oae_serial_host:
             elif user_input[0] == "q":
                 return
             else:
-                self.writeLog(f"Invalid command: {user_input}")
+                self.write_log(f"Invalid command: {user_input}")
 
 
 def main():
