@@ -11,3 +11,16 @@ packages = ["tools"]
 
 [project.scripts]
 oae_serial_host = "tools.oae_serial_host:main"
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # Pyflakes
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I", # isort
+]
+ignore = [
+  "E501", # ignore line length
+]
