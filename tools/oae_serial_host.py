@@ -1,12 +1,7 @@
-# oae_serial_host.py
-#
-# Olin College of Engineering
-#   3/24/2025  Mike Deeds
-#
-# Overview:
-#   This module implements the oae_serial packet protocol that can run over a serial UART or USB CDC.
-#   It is designed primarily as a command/response system initiated by the host, though
-#   debug / status / event messages may be sent any time by the embedded device.
+# This module implements the oae_serial packet protocol that can run over a serial
+# UART or USB CDC.
+# It is designed primarily as a command/response system initiated by the host, though
+# debug / status / event messages may be sent any time by the embedded device.
 #
 # OAE serial packet format:
 #   Byte 0: Header: 0x7E
@@ -14,19 +9,18 @@
 #   Byte 2: Payload_size
 #   Bytes 3 to Payload_size + 3
 #   Byte N: checksum (sum of all bytes, truncated to 8 bits)
-#
-#
 
+import datetime
+import os
 import sys
 import threading
-import os
-import datetime
 import time
+from enum import IntEnum
 from time import sleep
+
+import numpy as np
 import serial
 import serial.tools.list_ports as port_list
-import numpy as np
-from enum import IntEnum
 
 OAE_SERIAL_PROTOCOL_VERSION = "v1.3"
 
@@ -84,7 +78,7 @@ class Command(IntEnum):
     I2C_RD = 7  # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
     I2C_WR = 8  # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
     STOP = 9  # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
-    OK = 10 # No payload
+    OK = 10  # No payload
     OAE_TEST = 11  # Run the OAE test once (does not require a stop command)
 
 
@@ -149,10 +143,7 @@ class oae_serial_host:
         self.ConsolePrint = True
         self.open_logfile()
 
-        if "COM" in comport:  # Windows
-            self.isSerial = True
-            self.serial_init(comport)
-        elif "/dev" in comport:  # Linux
+        if "COM" in comport or "/dev" in comport:  # Windows
             self.isSerial = True
             self.serial_init(comport)
         else:
@@ -267,13 +258,12 @@ class oae_serial_host:
                     self.RxPayload.clear()
                     self.RxPayload_u8.clear()
 
-                if self.RxResponse == Response.U8:
-                    self.RxPayload_u8.append(rx_byte)
-                elif self.RxResponse == Response.BUF_START:
-                    self.RxPayload_u8.append(rx_byte)
-                elif self.RxResponse == Response.BUF:
-                    self.RxPayload_u8.append(rx_byte)
-                elif self.RxResponse == Response.BUF_END:
+                if (
+                    self.RxResponse == Response.U8
+                    or self.RxResponse == Response.BUF_START
+                    or self.RxResponse == Response.BUF
+                    or self.RxResponse == Response.BUF_END
+                ):
                     self.RxPayload_u8.append(rx_byte)
                 elif rx_byte != 0x0:  # don't save null characters
                     self.RxPayload.append(chr(rx_byte))
@@ -318,7 +308,7 @@ class oae_serial_host:
                     data_u32 = data_u32 | self.RxPayload_u8[j + 1]
                     self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
                 self.RxDataValid = True
-                if self.RxSilent == False:
+                if not self.RxSilent:
                     self.write_log(
                         f"\t{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
@@ -339,7 +329,7 @@ class oae_serial_host:
                 self.Buffer_SamplesReceived = int(
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
                 )
-                if self.RxSilent == False:
+                if not self.RxSilent:
                     self.write_log(
                         f"\t{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
@@ -362,7 +352,7 @@ class oae_serial_host:
                 )
                 self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
                 self.process_rx_buffer_payload()
-                if self.RxSilent == False:
+                if not self.RxSilent:
                     elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
                     self.write_log(
                         f"\t{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
@@ -380,9 +370,8 @@ class oae_serial_host:
                 self.save_audio_buffer(self.RxAudioBuffer)
 
             else:
-                if self.RxResponse == Response.ERR:
-                    if self.TxCommandsActive > 0:
-                        self.TxCommandsActive -= 1
+                if self.RxResponse == Response.ERR and self.TxCommandsActive > 0:
+                    self.TxCommandsActive -= 1
 
                 payloadStr = "".join(self.RxPayload)
                 self.write_log(f"\t{self.RxResponse} {payloadStr}")
@@ -390,9 +379,8 @@ class oae_serial_host:
                     f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                 )
         else:
-            if self.RxResponse == Response.ACK:
-                if self.TxCommandsActive > 0:
-                    self.TxCommandsActive -= 1
+            if self.RxResponse == Response.ACK and self.TxCommandsActive > 0:
+                self.TxCommandsActive -= 1
 
             if self.CurrentTxCommand != Command.BUF:
                 self.write_log(
@@ -429,10 +417,8 @@ class oae_serial_host:
     def upload_buffer_packet(self, Buf_Command, TxAudioBuffer, SampleIndexOffset):
         TxPayload = []
         TxPayload.append(BUF_TYPE_U24)
-        sampleCount = 0
-        for i in range(U24_SAMPLES_PER_PACKET):
+        for sampleCount, _ in enumerate(range(U24_SAMPLES_PER_PACKET)):
             sample = TxAudioBuffer[SampleIndexOffset + sampleCount]
-            sampleCount += 1
             TxPayload.append((sample >> 16) & 0xFF)
             TxPayload.append((sample >> 8) & 0xFF)
             TxPayload.append(sample & 0xFF)
@@ -460,7 +446,7 @@ class oae_serial_host:
         self.TxCommandsActive += 1
         SampleIndex += U24_SAMPLES_PER_PACKET
 
-        for i in range(AudioPacketsPerBuffer - 2):
+        for _ in range(AudioPacketsPerBuffer - 2):
             while self.TxCommandsActive > 5:
                 elapsedTime = time.perf_counter() - TxAudioBufferStartTime
                 if elapsedTime > 2.0:
@@ -521,7 +507,7 @@ class oae_serial_host:
         elif command == Command.BUF_START:
             self.upload_test_buffer()
         else:
-            if TxPayload == None:
+            if TxPayload is None:
                 self.send_TxPacket(command, EmptyPayload)
             else:
                 self.send_TxPacket(command, TxPayload)
@@ -572,9 +558,7 @@ class oae_serial_host:
                 self.i2c_wr(
                     device_addr=0x9C, device_register_addr=0x70, i2c_wr_data=0x75
                 )
-            elif user_input[0] == "h":
-                self.print_menu()
-            elif user_input[0] == "?":
+            elif user_input[0] == "h" or user_input[0] == "?":
                 self.print_menu()
             elif user_input[0] == "q":
                 return
