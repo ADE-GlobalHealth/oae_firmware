@@ -10,6 +10,7 @@
 #   Bytes 3 to Payload_size + 3
 #   Byte N: checksum (sum of all bytes, truncated to 8 bits)
 
+import argparse
 import datetime
 import os
 import sys
@@ -17,12 +18,13 @@ import threading
 import time
 from enum import IntEnum
 from time import sleep
+import logging
 
 import numpy as np
 import serial
 import serial.tools.list_ports as port_list
 
-OAE_SERIAL_PROTOCOL_VERSION = "v1.3"
+OAE_DEVICE_NAME = "Global Health OAE Device"  # defined in usbd_desc.c, used to automatically connect
 
 PACKET_HEADER_BYTE = 0x7E
 
@@ -566,25 +568,49 @@ class oae_serial_host:
                 self.write_log(f"Invalid command: {user_input}")
 
 
-def main():
-    print(f"OAE serial protocol version: {OAE_SERIAL_PROTOCOL_VERSION}")
+def find_default_port(device_name: str) -> str:
+    """Find the default port based on a device name.
 
-    if len(sys.argv) != 2:
-        print("\tUsage: python -m oae_serial_host <COM Port>")
-        print("\tLog and adc data files are saved to the logs/ subdirectory.")
+    Args:
+      device_name (str): The default name of a connected device
 
-        ports = list(port_list.comports())
+    Returns:
+      The path to the port of the connected device.
+    """
+    try:
+        default_port = str(
+            next(
+                port.device
+                for port in port_list.comports()
+                if port.description == device_name
+            )
+        )
+        return default_port
+    except StopIteration:
+        print(f"Default device {device_name} not available. Alternative serial ports:")
 
+        ports = port_list.comports()
         if not ports:
-            print("No serial ports found.")
-            return
+            print("No serial ports found")
         else:
-            print("Available Serial Ports:")
             for port in ports:
                 print(f"- {port.device} ({port.description})")
-            return
+        exit()
 
-    oae = oae_serial_host(sys.argv[1])
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="OAE serial protocol version 1.3",
+        description="Usage: uv run oae_serial_host <COM Port>",
+    )
+
+    parser.add_argument("--port")
+    args = parser.parse_args()
+
+    if not args.port:
+        args.port=find_default_port(OAE_DEVICE_NAME)
+
+    oae = oae_serial_host(args.port)
     oae.serial_user_interface()
     oae.closeLog()
 
