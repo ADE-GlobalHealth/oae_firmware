@@ -270,84 +270,84 @@ class oae_serial_host:
         self.RoundTripTime = int((self.RspTime - self.CmdTime) * 1e6)
 
         if self.RxPayloadSize > 0:
-            if self.RxResponse == Response.U32:
-                data_u32 = self.RxPayload_u8[0]
-                self.RxData_u8[0] = self.RxPayload_u8[0]
-                for j in range(3):
-                    data_u32 = data_u32 << 8
-                    data_u32 = data_u32 | self.RxPayload_u8[j + 1]
-                    self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
-                self.RxDataValid = True
-                if not self.RxSilent:
+            match self.RxResponse:
+                case Response.U32:
+                    data_u32 = self.RxPayload_u8[0]
+                    self.RxData_u8[0] = self.RxPayload_u8[0]
+                    for j in range(3):
+                        data_u32 = data_u32 << 8
+                        data_u32 = data_u32 | self.RxPayload_u8[j + 1]
+                        self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
+                    self.RxDataValid = True
+                    if not self.RxSilent:
+                        host_logger.debug(
+                            f"{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        )
+                case Response.U8:
+                    Data = self.RxPayload_u8[0]
                     host_logger.debug(
-                        f"{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
                     )
-            elif self.RxResponse == Response.U8:
-                Data = self.RxPayload_u8[0]
-                host_logger.debug(
-                    f"{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
-                )
-            elif self.RxResponse == Response.EVENT:
-                EventNumber = self.RxPayload_u8[0]
-                host_logger.debug(
-                    f"{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
-                )
-            elif self.RxResponse == Response.BUF_START:
-                self.Buffer_PacketCount = 1
-                self.RxAudioBufferStartTime = time.perf_counter()
-                self.RxAudioBuffer = []
-                self.Buffer_SamplesReceived = int(
-                    (self.RxPayloadSize - 1) / BYTES_PER_U24
-                )
-                if not self.RxSilent:
+                case Response.EVENT:
+                    EventNumber = self.RxPayload_u8[0]
                     host_logger.debug(
-                        f"{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
                     )
+                case Response.BUF_START:
+                    self.Buffer_PacketCount = 1
+                    self.RxAudioBufferStartTime = time.perf_counter()
+                    self.RxAudioBuffer = []
+                    self.Buffer_SamplesReceived = int(
+                        (self.RxPayloadSize - 1) / BYTES_PER_U24
+                    )
+                    if not self.RxSilent:
+                        host_logger.debug(
+                            f"{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        )
 
-                self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
-                self.process_rx_buffer_payload()
+                    self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
+                    self.process_rx_buffer_payload()
 
-            elif self.RxResponse == Response.BUF:
-                self.Buffer_PacketCount += 1
-                self.Buffer_SamplesReceived = int(
-                    (self.RxPayloadSize - 1) / BYTES_PER_U24
-                )
-                self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
-                self.process_rx_buffer_payload()
+                case Response.BUF:
+                    self.Buffer_PacketCount += 1
+                    self.Buffer_SamplesReceived = int(
+                        (self.RxPayloadSize - 1) / BYTES_PER_U24
+                    )
+                    self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
+                    self.process_rx_buffer_payload()
 
-            elif self.RxResponse == Response.BUF_END:
-                self.Buffer_PacketCount += 1
-                self.Buffer_SamplesReceived = int(
-                    (self.RxPayloadSize - 1) / BYTES_PER_U24
-                )
-                self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
-                self.process_rx_buffer_payload()
-                if not self.RxSilent:
-                    elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
+                case Response.BUF_END:
+                    self.Buffer_PacketCount += 1
+                    self.Buffer_SamplesReceived = int(
+                        (self.RxPayloadSize - 1) / BYTES_PER_U24
+                    )
+                    self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
+                    self.process_rx_buffer_payload()
+                    if not self.RxSilent:
+                        elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
+                        host_logger.debug(
+                            f"{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
+                        )
+                    self.save_audio_buffer(self.RxAudioBuffer)
+                case Response.LOG_DEBUG:
+                    device_logger.debug("".join(self.RxPayload))
+                case Response.LOG_INFO:
+                    device_logger.info("".join(self.RxPayload))
+                case Response.LOG_WARNING:
+                    device_logger.warning("".join(self.RxPayload))
+                case Response.LOG_ERROR:
+                    device_logger.error("".join(self.RxPayload))
+                case Response.LOG_CRITICAL:
+                    device_logger.critical("".join(self.RxPayload))
+                case _:
+                    if self.RxResponse == Response.ERR and self.TxCommandsActive > 0:
+                        self.TxCommandsActive -= 1
+
+                    payloadStr = "".join(self.RxPayload)
+                    host_logger.debug(f"{self.RxResponse} {payloadStr}")
                     host_logger.debug(
-                        f"{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
+                        f"RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
-                    if False:  # debug packet timing
-                        for i in range(len(self.RxPacketTimes)):
-                            if i == 0:
-                                host_logger.debug(
-                                    f"packet {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[0] - self.CmdTime}"
-                                )
-                            else:
-                                host_logger.debug(
-                                    f"packet {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[i] - self.RxPacketTimes[i - 1]}"
-                                )
-                self.save_audio_buffer(self.RxAudioBuffer)
-
-            else:
-                if self.RxResponse == Response.ERR and self.TxCommandsActive > 0:
-                    self.TxCommandsActive -= 1
-
-                payloadStr = "".join(self.RxPayload)
-                host_logger.debug(f"{self.RxResponse} {payloadStr}")
-                host_logger.debug(
-                    f"RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
-                )
         else:
             if self.RxResponse == Response.ACK and self.TxCommandsActive > 0:
                 self.TxCommandsActive -= 1
