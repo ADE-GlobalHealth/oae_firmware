@@ -12,19 +12,23 @@
 
 import argparse
 import datetime
+import logging
 import os
 import sys
 import threading
 import time
 from enum import IntEnum
 from time import sleep
-import logging
 
 import numpy as np
 import serial
 import serial.tools.list_ports as port_list
 
 OAE_DEVICE_NAME = "Global Health OAE Device"  # defined in usbd_desc.c, used to automatically connect
+
+LOGGING_LEVEL = logging.DEBUG
+host_logger = logging.getLogger("host")
+device_logger = logging.getLogger("device")
 
 PACKET_HEADER_BYTE = 0x7E
 
@@ -141,47 +145,18 @@ class oae_serial_host:
     TxAudioBuffer = []
 
     def __init__(self, comport):
-        self.logfile_open = False
-        self.ConsolePrint = True
-        self.open_logfile()
-
         if "COM" in comport or "/dev" in comport:  # Windows
             self.isSerial = True
             self.serial_init(comport)
         else:
             self.isSerial = False
 
-    def open_logfile(self):
-        if self.logfile_open:
-            self.close_logfile()
-
-        logs_dir = os.path.join(os.getcwd(), "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-
-        # Create a unique logfile based on the current date + time:
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_file_name = f"logs\\{current_time}.log"
-        print(f"\tOpening log file: {self.log_file_name}")
-        with open(self.log_file_name, "a") as self.log:
-            self.logfile_open = True
-            self.log.write(f"OAE serial host log file: {self.log_file_name}\n")
-
-    def write_log(self, text):
-        if self.ConsolePrint:
-            print(text)
-        t2 = text + "\n"
-        if self.log:
-            self.log.write(t2)
-            self.log.flush()  # Ensure data is written to disk immediately
-
-    def closeLog(self):
-        if self.log:
-            self.log.close()
-
     def save_audio_buffer(self, AudioBuffer, filename_prefix="Audio_buffer"):
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"logs\\{filename_prefix}_{current_time}.txt"
-        self.write_log(f"\tSaving audio buffer: {filename}")
+        filename = (
+            f"logs/{filename_prefix}_{current_time}.txt"
+        )
+        host_logger.info(f"\tSaving audio buffer: {filename}")
         with open(filename, "w") as f:
             for sample in AudioBuffer:
                 f.write(str(hex(sample)) + "\n")
@@ -190,16 +165,16 @@ class oae_serial_host:
         """Initialize serial connection."""
         try:
             self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            self.write_log(f"Connected to {port} at {baudrate} baud.")
+            host_logger.info(f"Connected to {port} at {baudrate} baud.")
 
         except serial.SerialException as e:
-            self.write_log(f"Error: Unable to open port {port} - {e}")
+            host_logger.error(f"Unable to open port {port} - {e}")
             sys.exit(1)
 
         # Python thread switch interval defaults to 5msec.
         sys.setswitchinterval(0.001)
         threadSwitchTime = sys.getswitchinterval()
-        self.write_log(f"threadSwitchTime: {threadSwitchTime}")
+        host_logger.debug(f"threadSwitchTime: {threadSwitchTime}")
 
         # Start a thread to read from the serial port
         thread = threading.Thread(target=self.read_from_port)
@@ -210,14 +185,14 @@ class oae_serial_host:
     #   This is run in a thread
     def read_from_port(self):
         while True:
-            if self.ser._port_handle and self.ser.in_waiting > 0:
+            if self.ser.in_waiting > 0:
                 # Read up to 64 bytes
                 byte_data = self.ser.read(64)
                 for i in range(len(byte_data)):
                     # if len(byte_data) > 0:
                     unsigned_byte = byte_data[i]
                     # unsigned_byte = int.from_bytes(byte_data, byteorder='big', signed=False) & 0xFF
-                    # self.write_log(f"read_from_port: {unsigned_byte.hex()}")
+                    # host_logger.debug(f"read_from_port: {unsigned_byte.hex()}")
                     self.RxQ.append(unsigned_byte)
 
             while len(self.RxQ) > 0:
@@ -233,23 +208,17 @@ class oae_serial_host:
             return  # Wait until the current packet has been processed.
         else:
             rx_byte = self.RxQ.pop(0)
-            # self.write_log(f"pop: {hex(rx_byte)} RxPacketIndex: {self.RxPacketIndex} ")
             if (self.RxPacketIndex == 0) & (rx_byte & 0xFF == 0x7E):
                 self.RxChecksum = rx_byte
-                # self.write_log(f"\tPacket Header: {hex(rx_byte)}  computed checksum: {self.RxChecksum}")
                 self.RspPktHeaderTime = time.perf_counter()
                 self.RxPacketIndex = 1
             elif self.RxPacketIndex == 1:
-                # self.write_log(f"\tPacket command: {rx_byte} type: {type(rx_byte)}")
                 self.RxResponse = Response(rx_byte)
                 self.RxChecksum += rx_byte
-                # self.write_log(f"\tRxResponse: {self.RxResponse}")
                 self.RxPacketIndex += 1
             elif self.RxPacketIndex == 2:
                 self.RxPayloadSize = rx_byte
                 self.RxChecksum += rx_byte
-                # if self.RxPayloadSize > 0:
-                #    self.write_log(f"\tRxPayloadSize: {self.RxPayloadSize}  computed checksum: {self.RxChecksum}")
                 self.RxPacketIndex += 1
             elif (
                 (self.RxPayloadSize > 0)
@@ -277,16 +246,15 @@ class oae_serial_host:
                     self.PktRxTime = time.perf_counter()
                     self.RxPacketIndex = 0
                 else:
-                    self.write_log(
+                    host_logger.warning(
                         f"Received invalid packet: RxResponse: {self.RxResponse} RxPayloadSize: {self.RxPayloadSize} computed checksum: {self.RxChecksum}"
                     )
                     self.RxPacketIndex = 0
-            #    host_logger.debug(f"\tRx invalid byte: {hex(rx_byte)} {chr(rx_byte)}")
 
     def process_rx_buffer_payload(self):
         if self.Buffer_SamplesReceived != U24_SAMPLES_PER_PACKET:
-            self.write_log(
-                f"\tErr: rx_audio_buffer_payload: RxPayloadSize: {self.RxPayloadSize} Buffer_SamplesReceived: {self.Buffer_SamplesReceived} U24_SAMPLES_PER_PACKET: {U24_SAMPLES_PER_PACKET}"
+            host_logger.error(
+                f"rx_audio_buffer_payload: RxPayloadSize: {self.RxPayloadSize} Buffer_SamplesReceived: {self.Buffer_SamplesReceived} U24_SAMPLES_PER_PACKET: {U24_SAMPLES_PER_PACKET}"
             )
 
         for i in range(self.Buffer_SamplesReceived):
@@ -311,18 +279,18 @@ class oae_serial_host:
                     self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
                 self.RxDataValid = True
                 if not self.RxSilent:
-                    self.write_log(
-                        f"\t{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                    host_logger.debug(
+                        f"{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
             elif self.RxResponse == Response.U8:
                 Data = self.RxPayload_u8[0]
-                self.write_log(
-                    f"\t{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
+                host_logger.debug(
+                    f"{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
                 )
             elif self.RxResponse == Response.EVENT:
                 EventNumber = self.RxPayload_u8[0]
-                self.write_log(
-                    f"\t{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
+                host_logger.debug(
+                    f"{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
                 )
             elif self.RxResponse == Response.BUF_START:
                 self.Buffer_PacketCount = 1
@@ -332,8 +300,8 @@ class oae_serial_host:
                     (self.RxPayloadSize - 1) / BYTES_PER_U24
                 )
                 if not self.RxSilent:
-                    self.write_log(
-                        f"\t{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                    host_logger.debug(
+                        f"{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                     )
 
                 self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
@@ -356,18 +324,18 @@ class oae_serial_host:
                 self.process_rx_buffer_payload()
                 if not self.RxSilent:
                     elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
-                    self.write_log(
-                        f"\t{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
+                    host_logger.debug(
+                        f"{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
                     )
                     if False:  # debug packet timing
                         for i in range(len(self.RxPacketTimes)):
                             if i == 0:
-                                self.write_log(
-                                    f"\t\tpacket {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[0] - self.CmdTime}"
+                                host_logger.debug(
+                                    f"packet {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[0] - self.CmdTime}"
                                 )
                             else:
-                                self.write_log(
-                                    f"\t\tpacket {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[i] - self.RxPacketTimes[i - 1]}"
+                                host_logger.debug(
+                                    f"packet {i} time: {self.RxPacketTimes[i]} delay: {self.RxPacketTimes[i] - self.RxPacketTimes[i - 1]}"
                                 )
                 self.save_audio_buffer(self.RxAudioBuffer)
 
@@ -376,17 +344,17 @@ class oae_serial_host:
                     self.TxCommandsActive -= 1
 
                 payloadStr = "".join(self.RxPayload)
-                self.write_log(f"\t{self.RxResponse} {payloadStr}")
-                self.write_log(
-                    f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                host_logger.debug(f"{self.RxResponse} {payloadStr}")
+                host_logger.debug(
+                    f"RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
                 )
         else:
             if self.RxResponse == Response.ACK and self.TxCommandsActive > 0:
                 self.TxCommandsActive -= 1
 
             if self.CurrentTxCommand != Command.BUF:
-                self.write_log(
-                    f"\t{self.RxResponse} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
+                host_logger.debug(
+                    f"{self.RxResponse} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
                 )
 
         self.ValidRXPacket = False
@@ -397,7 +365,7 @@ class oae_serial_host:
         Checksum = 0
         self.CurrentTxCommand = TxCommand
         if TxCommand != Command.BUF:
-            self.write_log(f"send_TxPacket: {TxCommand}")
+            host_logger.debug(f"send_TxPacket: {TxCommand}")
         TxPacket.append(PACKET_HEADER_BYTE)
         Checksum += PACKET_HEADER_BYTE
         TxPacket.append(TxCommand)
@@ -443,7 +411,7 @@ class oae_serial_host:
 
         SampleIndex = 0
         TxAudioBufferStartTime = time.perf_counter()
-        self.write_log(f"\tCMD_BUF_START time: {TxAudioBufferStartTime}")
+        host_logger.debug(f"CMD_BUF_START time: {TxAudioBufferStartTime}")
         self.upload_buffer_packet(Command.BUF_START, TxAudioBuf, SampleIndex)
         self.TxCommandsActive += 1
         SampleIndex += U24_SAMPLES_PER_PACKET
@@ -452,7 +420,7 @@ class oae_serial_host:
             while self.TxCommandsActive > 5:
                 elapsedTime = time.perf_counter() - TxAudioBufferStartTime
                 if elapsedTime > 2.0:
-                    self.write_log(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
+                    host_logger.error(f"CMD_BUF Timeout: {elapsedTime}")
                     break
                 else:
                     sleep(0.001)
@@ -464,7 +432,7 @@ class oae_serial_host:
         while self.TxCommandsActive > 0:
             elapsedTime = time.perf_counter() - TxAudioBufferStartTime
             if elapsedTime > 2.0:
-                self.write_log(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
+                host_logger.error(f"CMD_BUF Timeout: {elapsedTime}")
                 break
             else:
                 sleep(0.001)
@@ -476,13 +444,13 @@ class oae_serial_host:
         while self.TxCommandsActive > 0:
             elapsedTime = time.perf_counter() - TxAudioBufferStartTime
             if elapsedTime > 2.0:
-                self.write_log(f"\tErr: CMD_BUF Timeout: {elapsedTime}")
+                host_logger.error(f"CMD_BUF Timeout: {elapsedTime}")
                 break
             else:
                 sleep(0.001)
 
-        self.write_log(
-            f"\tCMD_BUF_END SampleIndex: {SampleIndex} elapsedTime: {elapsedTime}"
+        host_logger.debug(
+            f"CMD_BUF_END SampleIndex: {SampleIndex} elapsedTime: {elapsedTime}"
         )
 
     def i2c_rd(self, device_addr, device_register_addr):
@@ -505,7 +473,7 @@ class oae_serial_host:
             TxPayload.append(BUF_TYPE_U24)
             self.RxPacketTimes = []
             self.send_TxPacket(Command.BUF_REQ, TxPayload)
-            self.write_log(f"\tCMD_BUF_REQ time: {time.perf_counter()}")
+            host_logger.debug(f"CMD_BUF_REQ time: {time.perf_counter()}")
         elif command == Command.BUF_START:
             self.upload_test_buffer()
         else:
@@ -515,17 +483,17 @@ class oae_serial_host:
                 self.send_TxPacket(command, TxPayload)
 
     def print_menu(self):
-        self.write_log("Menu: ")
-        self.write_log("\t1) \tCMD_PING ")
-        self.write_log("\t2) \tCMD_STATUS ")
-        self.write_log("\t3) \tCMD_BUF Upload (host test pattern)")
-        self.write_log("\t4) \tCMD_BUF Request 0 (oae test pattern)")
-        self.write_log("\t5) \tCMD_BUF Request 1 (current oae buffer)")
-        self.write_log("\t6) \tCMD_STOP ")
-        self.write_log("\t7) \tCMD_I2C_RD ")
-        self.write_log("\t8) \tCMD_I2C_WR ")
-        self.write_log("\t? or h) Print this menu")
-        self.write_log("\tq) \tQuit")
+        print("Menu: ")
+        print("\t1) \tCMD_PING ")
+        print("\t2) \tCMD_STATUS ")
+        print("\t3) \tCMD_BUF Upload (host test pattern)")
+        print("\t4) \tCMD_BUF Request 0 (oae test pattern)")
+        print("\t5) \tCMD_BUF Request 1 (current oae buffer)")
+        print("\t6) \tCMD_STOP ")
+        print("\t7) \tCMD_I2C_RD ")
+        print("\t8) \tCMD_I2C_WR ")
+        print("\t? or h) Print this menu")
+        print("\tq) \tQuit")
 
     def serial_user_interface(self):
         self.print_menu()
@@ -565,7 +533,7 @@ class oae_serial_host:
             elif user_input[0] == "q":
                 return
             else:
-                self.write_log(f"Invalid command: {user_input}")
+                host_logger.warning(f"Invalid command: {user_input}")
 
 
 def find_default_port(device_name: str) -> str:
@@ -587,18 +555,37 @@ def find_default_port(device_name: str) -> str:
         )
         return default_port
     except StopIteration:
-        print(f"Default device {device_name} not available. Alternative serial ports:")
+        host_logger.error(
+            f"Default device {device_name} not available. Alternative serial ports:"
+        )
 
         ports = port_list.comports()
         if not ports:
-            print("No serial ports found")
+            host_logger.error("No serial ports found")
         else:
             for port in ports:
-                print(f"- {port.device} ({port.description})")
+                host_logger.info(f"- {port.device} ({port.description})")
         exit()
 
 
 def main():
+    # host and device logging configuration
+    os.makedirs("tools/logs", exist_ok=True)
+    formatter = logging.Formatter(
+        fmt="%(asctime)s %(name)-6s %(levelname)-8s %(filename)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    file_handler = logging.FileHandler(f"tools/logs/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    file_handler.setFormatter(formatter)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
+    host_logger.addHandler(stdout_handler)
+    host_logger.addHandler(file_handler)
+    host_logger.setLevel(level=LOGGING_LEVEL)
+    device_logger.addHandler(stdout_handler)
+    device_logger.addHandler(file_handler)
+    device_logger.setLevel(level=LOGGING_LEVEL)
+
     parser = argparse.ArgumentParser(
         prog="OAE serial protocol version 1.3",
         description="Usage: uv run oae_serial_host <COM Port>",
@@ -612,8 +599,3 @@ def main():
 
     oae = oae_serial_host(args.port)
     oae.serial_user_interface()
-    oae.closeLog()
-
-
-if __name__ == "__main__":
-    main()
