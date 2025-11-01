@@ -33,11 +33,14 @@ jobs:
       - name: Build firmware headlessly
         run: |
           mkdir -p /workspace
-          /opt/st/stm32cubeide_1.19.0/stm32cubeide \
-            -data /workspace \
-            -import $GITHUB_WORKSPACE/OAE_CliffBar \
-            -I $GITHUB_WORKSPACE/common/CMSIS-DSP/Include \
-            -build OAE_CliffBar
+
+          /opt/st/stm32cubeide_1.19.0/stm32cubeide --launcher.suppressErrors \
+          -nosplash  \
+          -application org.eclipse.cdt.managedbuilder.core.headlessbuild \ 
+          -data /home/tlee1/STM32CubeIDE/workspace_1.19.0 \
+          -importAll OAE_CliffBar \
+          -I /home/tlee1/Documents/oae_firmware/common/CMSIS-DSP/Include \
+          -build OAE_CliffBar
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
