@@ -14,6 +14,7 @@ void app_setup() {
 
 	// Initialize ADC through I2C
 	init_adc();
+
 	// Initialize DAC timers
 	init_dac();
 }
