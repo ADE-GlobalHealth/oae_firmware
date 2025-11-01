@@ -1,0 +1,40 @@
+name: Firmware Build For PRs (CliffBar)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - 'OAE_CliffBar/**.c'
+
+jobs:
+  build:
+    name: Build CliffBar Firmware
+    runs-on: ubuntu-latest
+    container:
+      image: ./github/docker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show environment info
+        run: |
+          java -version
+          gcc --version
+          ls -la /github/workspace
+
+      - name: Build firmware headlessly
+        run: |
+          mkdir -p /workspace
+          /opt/st/stm32cubeide_1.19.0/ide/headlessbuild \
+            -data /workspace \
+            -import /github/workspace/OAE_CliffBar \
+            -I /github/workspace/common/CMSIS-DSP/Include \
+            -build OAE_CliffBar
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: firmware
+          path: /workspace/OAE_CliffBar/Debug  
