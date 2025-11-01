@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'OAE_CliffBar/**.c'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,23 +19,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Java
+        run: |
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          java -version
+
       - name: Show environment info
         run: |
-          java -version
           gcc --version
-          ls -la /github/workspace
+          ls -la $GITHUB_WORKSPACE
 
       - name: Build firmware headlessly
         run: |
           mkdir -p /workspace
           /opt/st/stm32cubeide_1.19.0/ide/headlessbuild \
             -data /workspace \
-            -import /github/workspace/OAE_CliffBar \
-            -I /github/workspace/common/CMSIS-DSP/Include \
+            -import $GITHUB_WORKSPACE/OAE_CliffBar \
+            -I $GITHUB_WORKSPACE/common/CMSIS-DSP/Include \
             -build OAE_CliffBar
-          
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: firmware
-          path: /workspace/OAE_CliffBar/Debug  
+          name: cliffbar-firmware
+          path: /workspace/OAE_CliffBar/Debug
