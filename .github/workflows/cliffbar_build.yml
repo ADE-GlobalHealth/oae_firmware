@@ -33,7 +33,7 @@ jobs:
       - name: Build firmware headlessly
         run: |
           mkdir -p /workspace
-          /opt/st/stm32cubeide_1.19.0/ide/headlessbuild \
+          /opt/st/stm32cubeide_1.19.0/stm32cubeide \
             -data /workspace \
             -import $GITHUB_WORKSPACE/OAE_CliffBar \
             -I $GITHUB_WORKSPACE/common/CMSIS-DSP/Include \
