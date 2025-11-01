@@ -12,7 +12,7 @@ jobs:
     name: Build CliffBar Firmware
     runs-on: ubuntu-latest
     container:
-      image: ./github/docker
+      image: .xanderhendriks/stm32cubeide:16.0
 
     steps:
       - name: Checkout code
