@@ -30,17 +30,13 @@ jobs:
           gcc --version
           ls -la $GITHUB_WORKSPACE
 
-      - name: Build firmware headlessly
-        run: |
-          mkdir -p /workspace
-
-          /opt/st/stm32cubeide_1.19.0/stm32cubeide --launcher.suppressErrors \
-          -nosplash  \
-          -application org.eclipse.cdt.managedbuilder.core.headlessbuild \ 
-          -data /workspace \
-          -importAll OAE_CliffBar \
-          -I $GITHUB_WORKSPACE/common/CMSIS-DSP/Include \
-          -build OAE_CliffBar
+   
+      - name: Build Project
+        if: ${{ steps.skip_build.outputs.skip == 'false' }}
+        uses: xanderhendriks/action-build-stm32cubeide@v16.0
+        with:
+          project-path: '.'
+          project-target: 'CliffBar/Debug'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
