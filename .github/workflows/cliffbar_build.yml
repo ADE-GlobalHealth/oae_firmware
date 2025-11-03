@@ -5,36 +5,31 @@ on:
     types: [opened, synchronize, reopened]
     branches: [main]
     paths:
-      - 'OAE_CliffBar/**.c'
+      - 'OAE_CliffBar/**/*.c'
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: 'OAE_CliffBar'
 
 jobs:
   build:
-    name: Build CliffBar Firmware
+    name: "Building Firmware (Debug)"
     runs-on: ubuntu-latest
     container:
-      image: ./github/docker
+      image: xanderhendriks/stm32cubeide:16.0
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Show environment info
-        run: |
-          java -version
-          gcc --version
-          ls -la /github/workspace
+      - name: Build Project
+        uses: xanderhendriks/action-build-stm32cubeide@v16.0
+        with:
+          project-path: '.'
+          project-target: "${{ env.PROJECT_NAME }}/Debug"
 
-      - name: Build firmware headlessly
-        run: |
-          mkdir -p /workspace
-          /opt/st/stm32cubeide_1.19.0/ide/headlessbuild \
-            -data /workspace \
-            -import /github/workspace/OAE_CliffBar \
-            -I /github/workspace/common/CMSIS-DSP/Include \
-            -build OAE_CliffBar
-          
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: firmware
-          path: /workspace/OAE_CliffBar/Debug  
+          name: "${{ env.PROJECT_NAME }}.elf"
+          path: "${{ env.PROJECT_NAME }}/Debug"
