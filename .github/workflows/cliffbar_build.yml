@@ -8,9 +8,12 @@ on:
       - 'OAE_CliffBar/**.c'
   workflow_dispatch:
 
+env:
+  PROJECT_NAME: 'OAE_CliffBar'
+
 jobs:
   build:
-    name: Build CliffBar Firmware
+    name: "Build $PROJECT_NAME Firmware (Debug)"
     runs-on: ubuntu-latest
     container:
       image: xanderhendriks/stm32cubeide:16.0
@@ -19,21 +22,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-
-      - name: Show environment info
-        run: |
-          gcc --version
-          ls -la $GITHUB_WORKSPACE
-
-   
       - name: Build Project
         uses: xanderhendriks/action-build-stm32cubeide@v16.0
         with:
           project-path: '.'
-          project-target: 'OAE_CliffBar/Debug'
+          project-target: "$PROJECT_NAME/Debug"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: OAE_CliffBar.elf
-          path: OAE_CliffBar/Debug
+          name: "$PROJECT_NAME.elf"
+          path: "$PROJECT_NAME/Debug"
