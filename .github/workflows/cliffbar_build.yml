@@ -30,7 +30,7 @@ jobs:
         uses: xanderhendriks/action-build-stm32cubeide@v16.0
         with:
           project-path: '.'
-          project-target: 'OAE_CliffBar'
+          project-target: 'OAE_CliffBar/Debug'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
