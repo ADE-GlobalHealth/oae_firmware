@@ -27,7 +27,6 @@ jobs:
 
    
       - name: Build Project
-        if: ${{ steps.skip_build.outputs.skip == 'false' }}
         uses: xanderhendriks/action-build-stm32cubeide@v16.0
         with:
           project-path: '.'
