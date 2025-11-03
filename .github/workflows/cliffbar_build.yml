@@ -29,11 +29,11 @@ jobs:
       - name: Build Project
         uses: xanderhendriks/action-build-stm32cubeide@v16.0
         with:
-          project-path: '.'
-          project-target: 'OAE_CliffBar/Debug'
+          project-path: '/workspace/OAE_CliffBar/Debug'
+          project-target: 'OAE_CliffBar'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cliffbar-firmware
+          name: OAE_CliffBar.elf
           path: /workspace/OAE_CliffBar/Debug
