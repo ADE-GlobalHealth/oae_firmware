@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     branches: [main]
     paths:
-      - 'OAE_CliffBar/**.c'
+      - 'OAE_CliffBar/**/*.c'
   workflow_dispatch:
 
 env:
@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    name: "Build $PROJECT_NAME Firmware (Debug)"
+    name: "Build ${{ env.PROJECT_NAME }} Firmware (Debug)"
     runs-on: ubuntu-latest
     container:
       image: xanderhendriks/stm32cubeide:16.0
@@ -26,10 +26,10 @@ jobs:
         uses: xanderhendriks/action-build-stm32cubeide@v16.0
         with:
           project-path: '.'
-          project-target: "$PROJECT_NAME/Debug"
+          project-target: "${{ env.PROJECT_NAME }}/Debug"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "$PROJECT_NAME.elf"
-          path: "$PROJECT_NAME/Debug"
+          name: "${{ env.PROJECT_NAME }}.elf"
+          path: "${{ env.PROJECT_NAME }}/Debug"
