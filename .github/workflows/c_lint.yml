@@ -1,0 +1,37 @@
+name: C Lint Checker
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - '**/*.c'
+
+jobs:
+  lint-c:
+    name: Lint and Format C Code
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write  # GitHub annotations
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Super-Linter (C)
+        uses: github/super-linter@v6
+        env:
+
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+
+          VALIDATE_ALL_CODEBASE: false
+
+          FILTER_REGEX_INCLUDE: .*\.c$
+          VALIDATE_C: true
+          IGNORE_GITIGNORED_FILES: true
+          DISABLE_ERRORS: false
