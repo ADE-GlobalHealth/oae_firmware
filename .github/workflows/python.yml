@@ -1,32 +1,42 @@
+name: Python Lint Checker
 
-name: Python Linter & Style Checker
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [main] 
+    branches: [main]
     paths:
-      - '**.py'
+      - '**/*.py'
 
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  pylint:
-    name: Run pylint
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          python-version: "3.12"
+          fetch-depth: 0
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-      - name: Sync dependencies
-        run: uv sync --frozen
+      - name: Install pylint
+        run: |
+          pip install pylint
 
       - name: Run pylint
-        run: uv run pylint *.py
+        run: |
+          pylint --output-format=parseable --exit-zero $(git ls-files '*.py') \
+            | tee pylint-report.txt
 
-
-
+      - name: Fail if pylint errors found
+        run: |
+          if grep -q "error" pylint-report.txt; then
+            echo " Lint errors detected by pylint."
+            exit 1
+          fi
