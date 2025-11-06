@@ -23,5 +23,5 @@ jobs:
           style: file
           tidy-checks: ''
           files-changed-only: true
-          thread-comments: false
+          thread-comments: true
 
