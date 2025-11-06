@@ -23,15 +23,13 @@ jobs:
           fetch-depth: 0
 
       - name: Run Super-Linter (C)
-        uses: github/super-linter@v6
+        uses: github/super-linter@slim-latest
         env:
 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main
-
+          
           VALIDATE_ALL_CODEBASE: false
-
           FILTER_REGEX_INCLUDE: .*\.c$
           VALIDATE_C: true
           IGNORE_GITIGNORED_FILES: true
-          DISABLE_ERRORS: false
