@@ -31,12 +31,27 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint --output-format=parseable --exit-zero $(git ls-files '*.py') \
-            | tee pylint-report.txt
+          
+          pylint --output-format=parseable $(git ls-files '*.py') > pylint-report.txt
+          
+          while IFS= read -r line; do
+            file=$(echo "$line" | cut -d: -f1)
+            line_no=$(echo "$line" | cut -d: -f2)
+            col_no=$(echo "$line" | cut -d: -f3)
+            type=$(echo "$line" | cut -d: -f4 | tr -d ' ')
+            message=$(echo "$line" | cut -d: -f5-)
 
-      - name: Fail if pylint errors found
-        run: |
-          if grep -q "error" pylint-report.txt; then
-            echo " Lint errors detected by pylint."
-            exit 1
+            if [ "$type" = "error" ]; then
+              level="error"
+            elif [ "$type" = "warning" ]; then
+              level="warning"
+            else
+              level="notice"
+            fi
+
+            echo "::${level} file=${file},line=${line_no},col=${col_no}::${message}"
+            done < pylint-report.txt
+
+            if grep -q "^.*:.*:.*: error:.*$" pylint-report.txt; then
+              exit 1
           fi
