@@ -29,7 +29,6 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           version: 'latest'
-          args: "format --check --diff"
           format: github
           fail-on-error: true
 
