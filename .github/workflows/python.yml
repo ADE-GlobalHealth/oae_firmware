@@ -29,6 +29,7 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           version: 'latest'
-          args: "--check --diff"
+          args: "format --check --diff"
+
 
       
