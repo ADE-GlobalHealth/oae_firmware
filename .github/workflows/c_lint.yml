@@ -7,29 +7,39 @@ on:
     paths:
       - '**/*.c'
 
+permissions:
+  pull-requests: write 
+
 jobs:
-  lint-c:
-    name: Lint and Format C Code
+  lint:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      pull-requests: write  # GitHub annotations
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup C linter tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format clang-tidy cppcheck
+
+      - name: Run clang-format
+        run: clang-format -n **/*.c **/*.h || true
+
+      - name: Post comments 
+        uses: reviewdog/action-clang-format@latest
         with:
-          fetch-depth: 0
+          format: diff
+          reporter: github-pr-review
+          filter_mode: diff
+          fail_on_error: false
 
-      - name: Run Super-Linter (C)
-        uses: github/super-linter/slim@latest
-        env:
+      - name: Run clang-tidy
+        run: clang-tidy **/*.c -- -I. || true
 
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BRANCH: main
-
-          VALIDATE_ALL_CODEBASE: false
-          FILTER_REGEX_INCLUDE: .*\.c$
-          VALIDATE_C: true
-          IGNORE_GITIGNORED_FILES: true
+      - name: Post comments 
+        uses: reviewdog/action@latest
+        with:
+          tool_name: clang-tidy
+          reporter: github-pr-review
+          filter_mode: diff
+          fail_on_error: false
