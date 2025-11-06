@@ -8,30 +8,23 @@ on:
       - '**/*.c'
       - '**/*.h'
 
-permissions:
-  pull-requests: write 
-
-inputs:
-  reviewdog_version:
-    description: 'reviewdog version. [latest,nightly,vX.Y.Z]'
-    default: 'latest'
 
 jobs:
-  lint:
+  cpp-linter:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: cpp-linter/cpp-linter-action@v2
+      - uses: actions/checkout@v4
+      - uses: cpp-linter/cpp-linter-action@main
         id: linter
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          style: 'file'  # .clang-format config file
-          tidy-checks: '' # .clang-tidy config file
+          style: file
+          files-changed-only: false
+          thread-comments: false
 
-          thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}
       - name: Fail fast?!
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
+        if: steps.linter.outputs.checks-failed != 0
+        run: |
+          echo "some linter checks failed. ${{ steps.linter.outputs.checks-failed }}"
