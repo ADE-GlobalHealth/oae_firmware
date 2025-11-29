@@ -381,6 +381,17 @@ bool oae_serial_log(ulog_level_t severity, char *log_str)
   return oae_serial_send(logging_level, buf_len, TxBuffer);
 }
 
+void oae_serial_heartbeat(void) {
+  static uint32_t time = 0;
+  static uint32_t last_heartbeat = 0;
+
+  time = HAL_GetTick();
+  if (time - last_heartbeat > 1000) {
+    oae_serial_enqueue(RSP_HEARTBEAT, 0, NULL);
+    last_heartbeat = time;
+  }
+}
+
 // This function is polled by the calling function.
 // It will assemble a packet and return true when a valid packet is available.
 bool oae_serial_receive(uint8_t rx_char)

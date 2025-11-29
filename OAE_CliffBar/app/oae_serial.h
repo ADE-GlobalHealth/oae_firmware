@@ -141,6 +141,11 @@ bool oae_serial_log(ulog_level_t severity, char *log_str);
 bool oae_serial_receive(uint8_t rx_char);
 void oae_process_rx_packet(void);
 
+/**
+ * Send a serial heartbeat message based on HAL ticks.
+ */
+void oae_serial_heartbeat(void);
+
 int8_t RX_USB_CDC_Data(uint8_t* Buf, uint32_t *Len);
 
 // These functions are in app_main.c:

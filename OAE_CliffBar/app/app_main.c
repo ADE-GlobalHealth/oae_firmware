@@ -26,6 +26,9 @@ void app_setup() {
 
 void app_loop() {
 	heartbeat_led(LD1_GPIO_Port, LD1_Pin);
+  
+  // uncomment for 1 sec serial heartbeat
+  // oae_serial_heartbeat();
 
 	static uint8_t RxBuffer[APP_RX_DATA_SIZE];
 	static uint32_t RxBufferLen;
