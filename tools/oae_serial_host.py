@@ -281,7 +281,7 @@ class oae_serial_host:
 
     def process_rx_response(self):
         self.RspTime = time.perf_counter()
-        self.RoundTripTime = int((self.RspTime - self.CmdTime) * 1e6)
+        self.RoundTripTime = round(((self.RspTime - self.CmdTime) * 1e3),2)
 
         if self.RxPayloadSize > 0:
             match self.RxResponse:
@@ -295,17 +295,17 @@ class oae_serial_host:
                     self.RxDataValid = True
                     if not self.RxSilent:
                         host_logger.debug(
-                            f"{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                            f"{self.RxResponse} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime}ms"
                         )
                 case Response.U8:
                     Data = self.RxPayload_u8[0]
                     host_logger.debug(
-                        f"{self.RxResponse} Data: {hex(Data)} PktRxTime: {self.PktRxTime} sec"
+                        f"{self.RxResponse} Data: {hex(Data)}"
                     )
                 case Response.EVENT:
                     EventNumber = self.RxPayload_u8[0]
                     host_logger.debug(
-                        f"{self.RxResponse} Event Number: {EventNumber} PktRxTime: {self.PktRxTime} sec"
+                        f"{self.RxResponse} Event Number: {EventNumber}"
                     )
                 case Response.BUF_START:
                     self.Buffer_PacketCount = 1
@@ -316,7 +316,7 @@ class oae_serial_host:
                     )
                     if not self.RxSilent:
                         host_logger.debug(
-                            f"{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                            f"{self.RxResponse} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime}ms"
                         )
 
                     self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
@@ -340,7 +340,7 @@ class oae_serial_host:
                     if not self.RxSilent:
                         elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
                         host_logger.debug(
-                            f"{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec"
+                            f"{self.RxResponse} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime}ms elapsedTime: {elapsedTime} sec"
                         )
                     self.save_audio_buffer(self.RxAudioBuffer)
                 case Response.LOG_DEBUG:
@@ -360,7 +360,7 @@ class oae_serial_host:
                     payloadStr = "".join(self.RxPayload)
                     host_logger.debug(f"{self.RxResponse} {payloadStr}")
                     host_logger.debug(
-                        f"RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec"
+                        f"RoundTripTime: {self.RoundTripTime}ms"
                     )
         else:
             if self.RxResponse == Response.ACK and self.TxCommandsActive > 0:
@@ -368,7 +368,7 @@ class oae_serial_host:
 
             if self.CurrentTxCommand != Command.BUF:
                 host_logger.debug(
-                    f"{self.RxResponse} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec "
+                    f"{self.RxResponse} no payload. RoundTripTime: {self.RoundTripTime}ms"
                 )
 
         self.ValidRXPacket = False
