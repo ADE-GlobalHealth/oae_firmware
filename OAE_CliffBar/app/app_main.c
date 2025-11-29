@@ -37,9 +37,9 @@ void app_loop() {
 
 	// Check for incoming USB serial packets:
 	while (RX_USB_CDC_Data(RxBuffer, &RxBufferLen) == 1) {
-		for (int i = 0; i < RxBufferLen; i++) {
-			if (oae_serial_receive(RxBuffer[i])) {
-				HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+    for (int i = 0; i < RxBufferLen; i++) {
+      if (oae_serial_receive(RxBuffer[i])) {
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 				oae_process_rx_packet();
 				HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 			}
