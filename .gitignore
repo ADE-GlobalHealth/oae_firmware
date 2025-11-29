@@ -59,6 +59,7 @@ tools/logs/
 */.vscode/settings.json
 */cmake/gcc-arm-none-eabi.cmake
 */cmake/st-project.cmake
+.vscode/
 
 # Python
 oae_venv/
