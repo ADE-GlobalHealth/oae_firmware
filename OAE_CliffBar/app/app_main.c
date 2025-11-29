@@ -30,6 +30,8 @@ void app_loop() {
   // uncomment for 1 sec serial heartbeat
   // oae_serial_heartbeat();
 
+  oae_serial_send();
+
 	static uint8_t RxBuffer[APP_RX_DATA_SIZE];
 	static uint32_t RxBufferLen;
 

@@ -51,14 +51,16 @@ extern "C" {
 #define F32_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / F32_SAMPLES_PER_PACKET)
 #define S32_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / S32_SAMPLES_PER_PACKET)
 
+#define TRANSMIT_BUFFER_MAX_SIZE 10
+
 #define OAE_SERIAL_PROTOCOL_VERSION "v1.3"
 
 typedef struct {
-    uint8_t header;
-    uint8_t command;
-    uint8_t payload_size;
-    uint8_t payload[SER_MAX_PAYLOAD_LEN];
-    uint8_t checksum;
+	uint8_t header;
+	uint8_t command;
+	uint8_t payload_size;
+	uint8_t *payload;
+	uint8_t checksum;
 } SerialPacket_t;
 
 typedef enum {
@@ -116,16 +118,45 @@ typedef enum  {
 } PacketResponse_t;
 
 typedef struct {
-    int rx_packet_valid_count;
-    int rx_packet_err_count;
-    int rx_packet_err;
-    int tx_packet_count;
-    int tx_packet_err_count;
-    int rx_time_usec;
-    int rsp_ack_time;
-    int command_start_time;
-    int command_turnaround_time;
+  int rx_packet_valid_count;
+  int rx_packet_err_count;
+  int rx_packet_err;
+  int tx_packet_count;
+  int tx_packet_err_count;
+  int rx_time_usec;
+  int rsp_ack_time;
+  int command_start_time;
+  int command_turnaround_time;
 } SerialStats_t;
+
+/**
+ * Complete serial transmit packet.
+ */
+typedef struct {
+  PacketResponse_t packet_response;
+  uint8_t payload_size;
+  uint8_t *payload;
+} SerialResponse_t;
+
+/**
+ * Ring serial transmit buffer.
+ * 
+ * @var buffer (SerialResponse_t): The buffer of transmit packets
+ * @var head (uint8_t): The index of next packet to send
+ * @var tail (uint8_t): The index of the next packet to enqueue
+ */
+typedef struct {
+  SerialResponse_t buffer[TRANSMIT_BUFFER_MAX_SIZE];
+  uint8_t head;
+  uint8_t tail;
+} SerialTransmitBuffer_t;
+
+/**
+ * Calculate the headroom in the serial transmit buffer.
+ */
+static inline uint8_t buffer_headroom(const SerialTransmitBuffer_t *buffer){
+  return (buffer->tail - buffer->head + TRANSMIT_BUFFER_MAX_SIZE) % (TRANSMIT_BUFFER_MAX_SIZE + 1);
+}
 
 void oae_serial_init(void);
 bool oae_stop_command(PacketCommand_t command);
@@ -133,10 +164,36 @@ void oae_fill_test_buffer(BufferDataType_t BufType);
 
 uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf);
 uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, uint8_t *payload_buf);
-bool oae_serial_send(PacketResponse_t response, uint8_t payload_size, uint8_t *payload);
-bool oae_serial_send_error(char *error_str);
+
+/**
+ * Enqueue a serial packet in the transmit buffer.
+ *
+ * @param response (PacketResponse_t) The packet response of the packet
+ * @param payload_length (uint8_t) The length of the packet in bytes
+ * @param payload (uint8_t *) The payload of the packet
+ */
+void oae_serial_enqueue(PacketResponse_t response, uint8_t payload_size, uint8_t* payload);
+
+/**
+ * Attempt to send a serial packet from the transmit buffer.
+ */
+void oae_serial_send(void);
+
+/**
+ * Send a blocking serial packet.
+ */
+void oae_serial_send_blocking(PacketResponse_t response, uint8_t payload_size, uint8_t *payload);
+
+void oae_serial_send_error(char *error_str);
 bool oae_serial_send_buffer(BufferDataType_t BufType);
-bool oae_serial_log(ulog_level_t severity, char *log_str);
+
+/**
+ * Send a log message at a specified logging level.
+ *
+ * @param severity (ulog_level_t) The logging level to log the message
+ * @param log_str (char *) The string to send as the log message
+ */
+void oae_serial_log(ulog_level_t severity, char *log_str);
 
 bool oae_serial_receive(uint8_t rx_char);
 void oae_process_rx_packet(void);
