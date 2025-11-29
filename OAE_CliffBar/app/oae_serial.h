@@ -81,18 +81,19 @@ typedef struct {
 
 // Host commands:
 typedef enum {
-    CMD_NOP 			= 0,		// No payload, no response expected
-    CMD_PING 			= 1,		// Ping, no payload, RSP_PING response expected
-    CMD_STATUS 			= 2,		// Request status from OAE, no payload, multiple RSP_TEXT responses expected
-	CMD_BUF_REQ 		= 3,		// Payload: 1 byte: U8, Request buffer # from OAE
-	CMD_BUF_START 		= 4,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
-	CMD_BUF 			= 5,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
-	CMD_BUF_END 		= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
-	CMD_I2C_RD		 	= 7,		// Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
-	CMD_I2C_WR			= 8,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
-	CMD_STOP			= 9,		// Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
-	CMD_OK 				= 10,		// No payload
-  CMD_OAE_TEST  = 11,   // No payload
+	CMD_NOP 			= 0,		// No payload, no response expected
+  CMD_RESET     = 1,    // No payload, RSP_RESET response expected
+	CMD_PING 			= 2,		// Ping, no payload, RSP_PING response expected
+	CMD_STATUS 			= 3,		// Request status from OAE, no payload, multiple RSP_TEXT responses expected
+	CMD_BUF_REQ 		= 4,		// Payload: 1 byte: U8, Request buffer # from OAE
+	CMD_BUF_START 		= 5,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
+	CMD_BUF 			= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
+	CMD_BUF_END 		= 7,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
+	CMD_I2C_RD		 	= 8,		// Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
+	CMD_I2C_WR			= 9,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
+	CMD_STOP			= 10,		// Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
+	CMD_OK 				= 11,		// No payload
+  CMD_OAE_TEST  = 12,   // No payload
 } PacketCommand_t;
 
 // OAE Embedded device responses:

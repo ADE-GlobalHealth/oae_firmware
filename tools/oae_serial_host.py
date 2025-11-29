@@ -73,19 +73,20 @@ class Command(IntEnum):
         return "CMD_" + self.name
 
     NOP = 0  # No payload, no response expected
-    PING = 1  # Ping, no payload, RSP_PING response expected
+    RESET = 1  # No payload, RESET response expected
+    PING = 2  # Ping, no payload, RSP_PING response expected
     STATUS = (
-        2  # Request status from OAE, no payload, multiple RSP_TEXT responses expected
+        3  # Request status from OAE, no payload, multiple RSP_TEXT responses expected
     )
-    BUF_REQ = 3  # Payload: 1 byte: BUF_TYPE
-    BUF_START = 4  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
-    BUF = 5  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
-    BUF_END = 6  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
-    I2C_RD = 7  # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
-    I2C_WR = 8  # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
-    STOP = 9  # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
-    OK = 10  # No payload
-    OAE_TEST = 11  # Run the OAE test once (does not require a stop command)
+    BUF_REQ = 4  # Payload: 1 byte: BUF_TYPE
+    BUF_START = 5  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
+    BUF = 6  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
+    BUF_END = 7  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
+    I2C_RD = 8  # Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
+    I2C_WR = 9  # Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
+    STOP = 10  # Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
+    OK = 11  # No payload
+    OAE_TEST = 12  # Run the OAE test once (does not require a stop command)
 
 
 class Response(IntEnum):
@@ -98,26 +99,30 @@ class Response(IntEnum):
     def __str__(self):
         return "RSP_" + self.name
 
-    PING = 101  # Ping response, no payload
-    ACK = 102  # No payload
-    NAK = 103  # No payload
-    ERR = 104  # Payload: Up to 250 bytes, text string
-    TEXT = 105  # Payload: Up to 250 bytes, text string
-    BUF_START = 106  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer
-    BUF = 107  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data.
-    BUF_END = 108  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer
-    U8 = 109  # Payload: 1 byte:  U8
-    U32 = 110  # Payload: 4 bytes: U32
-    EVENT = 111  # Payload: 1 byte:  U8 (event number)
-    INVALID = 112  # No payload (Command from host was not recognized)
-    LOG_DEBUG = 113  # Payload: Up to 250 bytes, text string
-    LOG_INFO = 114  # Payload: Up to 250 bytes, text string
-    LOG_WARNING = 115  # Payload: Up to 250 bytes, text string
-    LOG_ERROR = 116  # Payload: Up to 250 bytes, text string
-    LOG_CRITICAL = 117  # Payload: Up to 250 bytes, text string
+    HEARTBEAT = 0  # Heartbeat response, no payload
+    PING = 1  # Ping response, no payload
+    ACK = 2  # No payload
+    NAK = 3  # No payload
+    ERR = 4  # Payload: Up to 250 bytes, text string
+    TEXT = 5  # Payload: Up to 250 bytes, text string
+    BUF_START = 6  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. First packet of the buffer
+    BUF = 7  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data.
+    BUF_END = 8  # Payload: byte 0: BUF_TYPE, bytes 1 to N: buffer data. Last packet of the buffer
+    U8 = 9  # Payload: 1 byte:  U8
+    U32 = 10  # Payload: 4 bytes: U32
+    EVENT = 11  # Payload: 1 byte:  U8 (event number)
+    INVALID = 12  # No payload (Command from host was not recognized)
+    LOG_DEBUG = 13  # Payload: Up to 250 bytes, text string
+    LOG_INFO = 14  # Payload: Up to 250 bytes, text string
+    LOG_WARNING = 15  # Payload: Up to 250 bytes, text string
+    LOG_ERROR = 16  # Payload: Up to 250 bytes, text string
+    LOG_CRITICAL = 17  # Payload: Up to 250 bytes, text string
 
 
 class oae_serial_host:
+    # connection management
+    kill_receive_thread = threading.Event()
+
     RxQ = []
     RxPayload = []
     RxSilent = False
@@ -145,11 +150,9 @@ class oae_serial_host:
     TxAudioBuffer = []
 
     def __init__(self, comport):
-        if "COM" in comport or "/dev" in comport:  # Windows
-            self.isSerial = True
-            self.serial_init(comport)
-        else:
-            self.isSerial = False
+        self.comport = comport
+        self.serial_init(self.comport)
+        self.reset_device()
 
     def save_audio_buffer(self, AudioBuffer, filename_prefix="Audio_buffer"):
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -163,13 +166,21 @@ class oae_serial_host:
 
     def serial_init(self, port, baudrate=921600, timeout=0.01):
         """Initialize serial connection."""
-        try:
-            self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            host_logger.info(f"Connected to {port} at {baudrate} baud.")
+        host_logger.info("Initializing serial port")
+        serial_exception = None
+        current_time = time.monotonic()
+        while (current_time - time.monotonic() < timeout):
+            try:
+                self.ser = serial.Serial(port, baudrate, timeout=1e-6)
+                host_logger.info(f"Connected to {port} at {baudrate} baud")
+                serial_exception = None
+                break
+            except serial.SerialException as error:
+                serial_exception = error
+                time.sleep(1e-6)
 
-        except serial.SerialException as e:
-            host_logger.error(f"Unable to open port {port} - {e}")
-            sys.exit(1)
+        if serial_exception:
+            host_logger.error(f"Unable to open port {port} - {serial_exception}")
 
         # Python thread switch interval defaults to 5msec.
         sys.setswitchinterval(0.001)
@@ -177,29 +188,32 @@ class oae_serial_host:
         host_logger.debug(f"threadSwitchTime: {threadSwitchTime}")
 
         # Start a thread to read from the serial port
-        thread = threading.Thread(target=self.read_from_port)
-        thread.daemon = True
-        thread.start()
+        self.kill_receive_thread.clear()
+        self.receive_thread = threading.Thread(target=self.read_from_port)
+        self.receive_thread.daemon = True
+        self.receive_thread.start()
 
     # Function to read from the serial port and process incoming data
     #   This is run in a thread
     def read_from_port(self):
-        while True:
-            if self.ser.in_waiting > 0:
-                # Read up to 64 bytes
-                byte_data = self.ser.read(64)
-                for i in range(len(byte_data)):
-                    # if len(byte_data) > 0:
-                    unsigned_byte = byte_data[i]
-                    # unsigned_byte = int.from_bytes(byte_data, byteorder='big', signed=False) & 0xFF
-                    # host_logger.debug(f"read_from_port: {unsigned_byte.hex()}")
-                    self.RxQ.append(unsigned_byte)
+        self.connection_checked = False
+        while not self.kill_receive_thread.is_set():
+            try:
+                if self.ser.is_open and self.ser.in_waiting > 0:
+                    # Read up to 64 bytes
+                    byte_data = self.ser.read(64)
+                    for unsigned_byte in byte_data:
+                        self.RxQ.append(unsigned_byte)
 
-            while len(self.RxQ) > 0:
-                self.build_rx_packet()
-                if self.ValidRXPacket:
-                    self.RxPacketTimes.append(time.perf_counter())
-                    self.process_rx_response()
+                while len(self.RxQ) > 0:
+                    self.build_rx_packet()
+                    if self.ValidRXPacket:
+                        self.RxPacketTimes.append(time.perf_counter())
+                        self.process_rx_response()
+            except OSError:
+                print("Unable to check receive buffer, device may be disconnected.")
+                raise RuntimeError("Unable to check receive buffer, device may be disconnected.") from None
+            time.sleep(1e-6)
 
     def build_rx_packet(self):
         if len(self.RxQ) == 0:
@@ -482,18 +496,34 @@ class oae_serial_host:
             else:
                 self.send_TxPacket(command, TxPayload)
 
+    def reset_device(self) -> None:
+        """"""
+        host_logger.info("Resetting device")
+        self.command_response(Command.RESET)
+        self.kill_receive_thread.set()
+        self.receive_thread.join()
+        
+        # close serial port
+        host_logger.info("Closing serial port")
+        self.ser.close()
+
+        # reopen serial port
+        time.sleep(1)
+        self.serial_init(port=self.comport, timeout=5)
+
     def print_menu(self):
-        print("Menu: ")
-        print("\t1) \tCMD_PING ")
-        print("\t2) \tCMD_STATUS ")
-        print("\t3) \tCMD_BUF Upload (host test pattern)")
-        print("\t4) \tCMD_BUF Request 0 (oae test pattern)")
-        print("\t5) \tCMD_BUF Request 1 (current oae buffer)")
-        print("\t6) \tCMD_STOP ")
-        print("\t7) \tCMD_I2C_RD ")
-        print("\t8) \tCMD_I2C_WR ")
-        print("\t? or h) Print this menu")
-        print("\tq) \tQuit")
+        print("# Menu: ")
+        print("# \t0) \tCMD_RESET ")
+        print("# \t1) \tCMD_PING ")
+        print("# \t2) \tCMD_STATUS ")
+        print("# \t3) \tCMD_BUF Upload (host test pattern)")
+        print("# \t4) \tCMD_BUF Request 0 (oae test pattern)")
+        print("# \t5) \tCMD_BUF Request 1 (current oae buffer)")
+        print("# \t6) \tCMD_STOP ")
+        print("# \t7) \tCMD_I2C_RD ")
+        print("# \t8) \tCMD_I2C_WR ")
+        print("# \t? or h) Print this menu")
+        print("# \tq) \tQuit")
 
     def serial_user_interface(self):
         self.print_menu()
@@ -501,6 +531,8 @@ class oae_serial_host:
             user_input = input("")
             if len(user_input) == 0:
                 continue
+            elif user_input[0] == "0":
+                self.reset_device()
             elif user_input[0] == "1":
                 self.command_response(Command.PING)
             elif user_input[0] == "2":
