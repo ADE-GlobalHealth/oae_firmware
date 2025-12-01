@@ -1,0 +1,31 @@
+name: C Lint Checker
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - '**/*.c'
+      - '**/*.h'
+
+
+jobs:
+  cpp-linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cpp-linter/cpp-linter-action@main
+        id: linter
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: file
+          tidy-checks: ''
+          files-changed-only: true
+          thread-comments: true
+      - name: If Errors Found
+        if: steps.linter.outputs.checks-failed > 0
+        run: |
+          echo "Lint/Style Errors Detected"
+          exit 1
