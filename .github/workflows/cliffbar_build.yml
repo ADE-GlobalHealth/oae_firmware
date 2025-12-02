@@ -25,7 +25,7 @@ jobs:
       - name: Build Project
         uses: xanderhendriks/action-build-stm32cubeide@v16.0
         with:
-          project-path: '.'
+          project-path: './${{ env.PROJECT_NAME }}'
           project-target: "${{ env.PROJECT_NAME }}/Debug"
 
       - name: Upload build artifacts
