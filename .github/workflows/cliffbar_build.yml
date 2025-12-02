@@ -10,34 +10,48 @@ on:
 
 env:
   PROJECT_NAME: 'OAE_CliffBar'
+  STM32CUBEIDE_IMAGE: 'xanderhendriks/stm32cubeide:16.0'
+  WORKSPACE_CACHE_KEY: 'stm32-workspace-${{ hashFiles("OAE_CliffBar/**/*.c") }}'
 
 jobs:
   build:
     name: "Building Firmware (Debug)"
-    runs-on: ubuntu-latest
-    container:
-      image: xanderhendriks/stm32cubeide:16.0
+    runs-on: ubuntu-latest  # Host runner with Docker installed
 
     steps:
+      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Project (direct Docker)
+      # 2. Cache STM32CubeIDE workspace
+      - name: Cache STM32CubeIDE workspace
+        uses: actions/cache@v3
+        with:
+          path: /tmp/stm32_workspace
+          key: ${{ env.WORKSPACE_CACHE_KEY }}
+
+      # 3. Pull prebuilt STM32CubeIDE Docker image
+      - name: Pull prebuilt STM32CubeIDE image
+        run: docker pull ${{ env.STM32CUBEIDE_IMAGE }}
+
+      # 4. Run headless build in Docker
+      - name: Build Firmware
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/project \
             -v /tmp/stm32_workspace:/workspace \
-            xandershendriks/stm32cubeide:16.0 \
+            ${{ env.STM32CUBEIDE_IMAGE }} \
             /opt/st/stm32cubeide_1.19.0/stm32cubeide \
               --launcher.suppressErrors -nosplash \
               -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
               -data /workspace \
-              -importAll /project/OAE_CliffBar \
-              -build OAE_CliffBar
+              -importAll /project/${{ env.PROJECT_NAME }} \
+              -I /project/common/CMSIS-DSP/Include \
+              -build ${{ env.PROJECT_NAME }}
 
-
+      # 5. Upload build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PROJECT_NAME }}.elf"
-          path: "${{ env.PROJECT_NAME }}/Debug"
+          name: ${{ env.PROJECT_NAME }}.elf
+          path: ${{ github.workspace }}/${{ env.PROJECT_NAME }}/Debug
