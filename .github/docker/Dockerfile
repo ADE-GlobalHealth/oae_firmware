@@ -6,7 +6,7 @@ FROM ${IMAGE} AS base
 RUN apt-get -y update && \
     apt-get -y install zip
 
-COPY st-stm32cubeide_1.19.0_25607_20250703_0907_amd64.deb_bundle.sh.zip /tmp/stm32cubeide-installer.sh.zip
+COPY st-stm32cubeide_2.0.0_26820_20251114_1348_amd64.deb_bundle.sh.zip /tmp/stm32cubeide-installer.sh.zip
 
 # Unzip &  delete zip file
 RUN unzip -p /tmp/stm32cubeide-installer.sh.zip > /tmp/stm32cubeide-installer.sh && rm /tmp/stm32cubeide-installer.sh.zip
@@ -20,20 +20,13 @@ ENV PATH="${PATH}:/opt/st/stm32cubeide_${STM32CUBEIDE_VERSION}"
 
 
 # Install dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        openjdk-17-jdk \
-        gcc g++ \
-        libusb-1.0-0 \
-        udev \
-        libgtk2.0-0 \
-        libxext6 \
-        libxrender1 \
-        libxtst6 \
-        libxi6 \
-        xauth \
-        x11-utils && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jre \
+    gcc g++ \
+    libusb-1.0-0 \
+    udev \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=base /tmp/stm32cubeide-installer.sh /tmp
 
