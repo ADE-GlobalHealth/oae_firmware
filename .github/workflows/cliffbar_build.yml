@@ -22,11 +22,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Project
-        uses: xanderhendriks/action-build-stm32cubeide@v16.0
-        with:
-          project-path: './${{ env.PROJECT_NAME }}'
-          project-target: "${{ env.PROJECT_NAME }}/Debug"
+      - name: Build Project (direct Docker)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/project \
+            -v /tmp/stm32_workspace:/workspace \
+            xandershendriks/stm32cubeide:16.0 \
+            /opt/st/stm32cubeide_1.19.0/stm32cubeide \
+              --launcher.suppressErrors -nosplash \
+              -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
+              -data /workspace \
+              -importAll /project/OAE_CliffBar \
+              -build OAE_CliffBar
+
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
