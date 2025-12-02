@@ -11,7 +11,7 @@ on:
 env:
   PROJECT_NAME: 'OAE_CliffBar'
   STM32CUBEIDE_IMAGE: 'xanderhendriks/stm32cubeide:16.0'
-  WORKSPACE_CACHE_KEY: 'stm32-workspace-${{ hashFiles("OAE_CliffBar/**/*.c") }}'
+  WORKSPACE_CACHE_KEY: stm32-workspace-${{ hashFiles(OAE_CliffBar/**/*.c) }}
 
 jobs:
   build:
