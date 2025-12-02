@@ -9,32 +9,26 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_NAME: 'OAE_CliffBar'
-  STM32CUBEIDE_IMAGE: 'xanderhendriks/stm32cubeide:16.0'
-  WORKSPACE_CACHE_KEY: stm32-workspace-${{ hashFiles('OAE_CliffBar/**/*.c') }}
+  PROJECT_NAME: OAE_CliffBar
+  STM32CUBEIDE_IMAGE: xanderhendriks/stm32cubeide:16.0
 
 jobs:
   build:
     name: "Building Firmware (Debug)"
-    runs-on: ubuntu-latest  # Host runner with Docker installed
-
+    runs-on: ubuntu-latest  
     steps:
-      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Cache STM32CubeIDE workspace
       - name: Cache STM32CubeIDE workspace
         uses: actions/cache@v3
         with:
           path: /tmp/stm32_workspace
-          key: ${{ env.WORKSPACE_CACHE_KEY }}
+          key: stm32-workspace
 
-      # 3. Pull prebuilt STM32CubeIDE Docker image
       - name: Pull prebuilt STM32CubeIDE image
         run: docker pull ${{ env.STM32CUBEIDE_IMAGE }}
 
-      # 4. Run headless build in Docker
       - name: Build Firmware
         run: |
           docker run --rm \
@@ -49,7 +43,6 @@ jobs:
               -I /project/common/CMSIS-DSP/Include \
               -build ${{ env.PROJECT_NAME }}
 
-      # 5. Upload build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
