@@ -48,3 +48,20 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}.elf
           path: ${{ github.workspace }}/${{ env.PROJECT_NAME }}/Debug
+      - name: Lint v2
+        uses: cpp-linter/cpp-linter-action@main
+        id: linter
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: file
+          tidy-checks: ''
+          files-changed-only: true
+          thread-comments: true
+          database: ${{ env.PROJECT_NAME }}/compile_commands.json
+      - name: If Errors Found
+        if: steps.linter.outputs.checks-failed > 0
+        run: |
+          echo "Lint/Style Errors Detected"
+          exit 1
