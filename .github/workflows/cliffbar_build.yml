@@ -59,7 +59,7 @@ jobs:
           tidy-checks: ''
           files-changed-only: true
           thread-comments: true
-          database: ${{ env.PROJECT_NAME }}/compile_commands.json
+          database: ${{ env.PROJECT_NAME }}/Debug/compile_commands.json
       - name: If Errors Found
         if: steps.linter.outputs.checks-failed > 0
         run: |
