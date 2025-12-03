@@ -317,7 +317,7 @@ class oae_serial_host:
     def process_rx_buffer_payload(self):
                 
         if self.Buffer_SamplesReceived != U24_SAMPLES_PER_PACKET:
-            self.writeLog(f"\tErr: rx_audio_buffer_payload: RxPayloadSize: {self.RxPayloadSize} Buffer_SamplesReceived: {self.Buffer_SamplesReceived} U24_SAMPLES_PER_PACKET: {U24_SAMPLES_PER_PACKET}");
+            self.writeLog(f"\tErr: rx_audio_buffer_payload: RxPayloadSize: {self.RxPayloadSize} Buffer_SamplesReceived: {self.Buffer_SamplesReceived} U24_SAMPLES_PER_PACKET: {U24_SAMPLES_PER_PACKET}")
             
         for i in range(self.Buffer_SamplesReceived):
             AudioSample = (self.RxPayload_u8[i*BYTES_PER_U24] << 16) | (self.RxPayload_u8[i*BYTES_PER_U24 + 1] << 8)  | self.RxPayload_u8[i*BYTES_PER_U24 + 2]
@@ -337,7 +337,7 @@ class oae_serial_host:
                     data_u32 = data_u32 | self.RxPayload_u8[j + 1]
                     self.RxData_u8[j + 1] = self.RxPayload_u8[j + 1]
                 self.RxDataValid = True
-                if self.RxSilent == False:
+                if not self.RxSilent:
                     self.writeLog(f"\t{self.command_name(self.RxCommand)} Payload: {hex(data_u32)} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec")
             elif self.RxCommand == RSP_U8:
                 Data = self.RxPayload_u8[0]
@@ -350,7 +350,7 @@ class oae_serial_host:
                 self.RxAudioBufferStartTime = time.perf_counter()
                 self.RxAudioBuffer = []                
                 self.Buffer_SamplesReceived = int((self.RxPayloadSize-1)/BYTES_PER_U24)                    
-                if self.RxSilent == False:
+                if not self.RxSilent:
                     self.writeLog(f"\t{self.command_name(self.RxCommand)} # Buffer_SamplesReceived: {self.Buffer_SamplesReceived} RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec")
                     
                 self.Buffer_TotalSamplesReceived = self.Buffer_SamplesReceived
@@ -367,7 +367,7 @@ class oae_serial_host:
                 self.Buffer_SamplesReceived = int((self.RxPayloadSize-1)/BYTES_PER_U24)                    
                 self.Buffer_TotalSamplesReceived += self.Buffer_SamplesReceived
                 self.process_rx_buffer_payload()
-                if self.RxSilent == False:
+                if not self.RxSilent:
                     elapsedTime = time.perf_counter() - self.RxAudioBufferStartTime
                     self.writeLog(f"\t{self.command_name(self.RxCommand)} Buffer_PacketCount: {self.Buffer_PacketCount} # samples: {self.Buffer_TotalSamplesReceived} RoundTripTime: {self.RoundTripTime} usec elapsedTime: {elapsedTime} sec")
                     if False:       # debug packet timing
@@ -380,14 +380,16 @@ class oae_serial_host:
                         
             else:
                 if self.RxCommand == RSP_ERR:
-                    if self.TxCommandsActive > 0: self.TxCommandsActive -= 1
+                    if self.TxCommandsActive > 0:
+                        self.TxCommandsActive -= 1
                 
                 payloadStr = ''.join(self.RxPayload)
                 self.writeLog(f"\t{self.command_name(self.RxCommand)} {payloadStr}")
                 self.writeLog(f"\t\tRoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec")
         else:
             if self.RxCommand == RSP_ACK:
-                if self.TxCommandsActive > 0: self.TxCommandsActive -= 1
+                if self.TxCommandsActive > 0:
+                    self.TxCommandsActive -= 1
                 
             if self.CurrentTxCommand != CMD_BUF:
                 self.writeLog(f"\t{self.command_name(self.RxCommand)} no payload. RoundTripTime: {self.RoundTripTime} usec PktRxTime: {self.PktRxTime} sec ")
@@ -511,7 +513,7 @@ class oae_serial_host:
         elif command == CMD_BUF_START:
             self.upload_test_buffer()
         else:
-            if TxPayload == None:
+            if TxPayload is None:
                 self.send_TxPacket(command, EmptyPayload)
             else: 
                 self.send_TxPacket(command, TxPayload)

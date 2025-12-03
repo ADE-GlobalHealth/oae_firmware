@@ -4,7 +4,6 @@
 '''
 
 import matplotlib.pyplot as plt
-import csv
 
 def hex_to_twos_complement(hex_string, bits=16):
     """
@@ -28,9 +27,6 @@ def parse_debugger_output(debugger_output):
     for line in lines:
         # Split each line into parts
         parts = line.split()
-
-
-        test="tests"
         
         # Skip the first part (the address) and process the remaining hex pairs
         hex_pairs = parts[1:]
