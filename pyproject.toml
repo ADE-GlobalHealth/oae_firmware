@@ -10,7 +10,7 @@ dependencies = ["pyserial (>=3.5,<4.0)", "numpy (>=2.2.5,<3.0.0)"]
 packages = ["tools"]
 
 [project.scripts]
-oae_serial_host = "tools.oae_serial_host:main"
+oae_serial_host = "tools.oae_serial.oae_serial_host:main"
 
 [tool.ruff.lint]
 select = [

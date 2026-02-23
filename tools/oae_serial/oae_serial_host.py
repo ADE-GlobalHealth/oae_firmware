@@ -607,7 +607,7 @@ def main():
         fmt="%(asctime)s %(name)-6s %(levelname)-8s %(filename)s:%(lineno)d - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    file_handler = logging.FileHandler(f"tools/logs/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    file_handler = logging.FileHandler(f"tools/oae_serial/logs/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     file_handler.setFormatter(formatter)
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setFormatter(formatter)
