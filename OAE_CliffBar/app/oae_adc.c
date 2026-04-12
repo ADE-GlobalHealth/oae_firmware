@@ -1,5 +1,4 @@
 #include "oae_adc.h"
-
 void init_adc(void) {
 	tlv_config_t adc_config = {
 		.areg_select = INTERNAL,
@@ -13,10 +12,14 @@ void init_adc(void) {
 		.pll_en = ENABLED,
 	};
 
-	tlv_init(adc_config);
-
 	// wake up from sleep
 	tlv_sleep(DISABLED);
+
+	HAL_Delay(10);
+	tlv_init(adc_config);
+	start_dma_adc_input();
+
+	
 }
 
 // TODO: these ideally should not be global variables
@@ -27,4 +30,14 @@ void start_dma_adc_input(void) {
 	HAL_SAI_Receive_DMA(&hsai_BlockA2, (uint8_t*) data_i2s_0, BUFFER_SIZE);
 }
 
-//todo: write function or modify the above to only collect 4096 samples
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
+    if (hsai->Instance == hsai_BlockA2.Instance) {
+        __NOP();
+    }
+}
+
+
+
+
+
+

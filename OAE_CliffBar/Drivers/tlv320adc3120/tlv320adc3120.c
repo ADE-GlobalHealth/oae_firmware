@@ -32,6 +32,8 @@ void tlv_init(tlv_config_t tlv_config) {
 	// perform a software reset to ensure TLV is at default
 	tlv_software_reset();
 	HAL_Delay(5);
+	tlv_sleep(DISABLED);
+    HAL_Delay(20);   // give it time to actually wake up
 
 	// AREG select
 	switch (tlv_config.areg_select) {
@@ -102,21 +104,24 @@ void tlv_init(tlv_config_t tlv_config) {
 	}
 
 	// analog input channel enable
-	uint8_t analog_in_data = IN_CH_EN_DEFAULT;
-	for (uint8_t i = 0; i < 4; i++) {
-		analog_in_data &= ~(0b1 << (8 - i));
-		analog_in_data |= tlv_config.in_ch_en[i] << (8 - i);
-	}
+	uint8_t analog_in_data = 0x00;
+	if (tlv_config.in_ch_en[0]) analog_in_data |= IN_CH_EN_CH1_ENABLED;
+	if (tlv_config.in_ch_en[1]) analog_in_data |= IN_CH_EN_CH2_ENABLED;
+	if (tlv_config.in_ch_en[2]) analog_in_data |= IN_CH_EN_CH3_ENABLED;
+	if (tlv_config.in_ch_en[3]) analog_in_data |= IN_CH_EN_CH4_ENABLED;
+
 	// mask not required, register is only used for analog channel
 	// enable/disable
 	_tlv_write_register(IN_CH_EN_ADDRESS, &analog_in_data);
 
+	
 	// digital output channel enable
-	uint8_t digital_out_data = ASI_OUT_CH_EN_DEFAULT;
-	for (uint8_t i = 0; i < 4; i++) {
-		digital_out_data &= ~(0b1 << (8 - i));
-		digital_out_data |= tlv_config.out_ch_en[i] << (8 - i);
-	}
+	uint8_t digital_out_data = 0x00;
+	if (tlv_config.out_ch_en[0]) digital_out_data |= ASI_OUT_CH_EN_CH1_ENABLED;
+	if (tlv_config.out_ch_en[1]) digital_out_data |= ASI_OUT_CH_EN_CH2_ENABLED;
+	if (tlv_config.out_ch_en[2]) digital_out_data |= ASI_OUT_CH_EN_CH3_ENABLED;
+	if (tlv_config.out_ch_en[3]) digital_out_data |= ASI_OUT_CH_EN_CH4_ENABLED;
+
 	// mask not required, register is only used for digital channel
 	// enable/disable
 	_tlv_write_register(ASI_OUT_CH_EN_ADDRESS, &digital_out_data);
