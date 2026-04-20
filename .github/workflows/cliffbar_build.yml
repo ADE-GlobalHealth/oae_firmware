@@ -1,0 +1,50 @@
+name: Firmware Build For PRs (CliffBar)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - 'OAE_CliffBar/**/*.c'
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: OAE_CliffBar
+  STM32CUBEIDE_IMAGE: xanderhendriks/stm32cubeide:16.0
+
+jobs:
+  build:
+    name: "Building Firmware (Debug)"
+    runs-on: ubuntu-latest  
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache STM32CubeIDE workspace
+        uses: actions/cache@v3
+        with:
+          path: /tmp/stm32_workspace
+          key: stm32-workspace
+
+      - name: Pull prebuilt STM32CubeIDE image
+        run: docker pull ${{ env.STM32CUBEIDE_IMAGE }}
+
+      - name: Build Firmware
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/project \
+            -v /tmp/stm32_workspace:/workspace \
+            ${{ env.STM32CUBEIDE_IMAGE }} \
+            /opt/st/stm32cubeide_1.19.0/stm32cubeide \
+              --launcher.suppressErrors -nosplash \
+              -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
+              -data /workspace \
+              -importAll /project/${{ env.PROJECT_NAME }} \
+              -I /project/common/CMSIS-DSP/Include \
+              -build ${{ env.PROJECT_NAME }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}.elf
+          path: ${{ github.workspace }}/${{ env.PROJECT_NAME }}/Debug
