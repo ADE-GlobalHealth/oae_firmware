@@ -28,6 +28,8 @@ extern "C" {
 
 #include <stdbool.h>
 
+#include "ulog.h"
+
 #define SER_MAX_PACKET_LEN 254
 #define SER_MAX_PAYLOAD_LEN 250
 
@@ -49,14 +51,16 @@ extern "C" {
 #define F32_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / F32_SAMPLES_PER_PACKET)
 #define S32_PACKETS_PER_BUFFER  (SERIAL_BUFFER_MAX_SIZE / S32_SAMPLES_PER_PACKET)
 
+#define TRANSMIT_BUFFER_MAX_SIZE 10
+
 #define OAE_SERIAL_PROTOCOL_VERSION "v1.3"
 
 typedef struct {
-    uint8_t header;
-    uint8_t command;
-    uint8_t payload_size;
-    uint8_t payload[SER_MAX_PAYLOAD_LEN];
-    uint8_t checksum;
+	uint8_t header;
+	uint8_t command;
+	uint8_t payload_size;
+	uint8_t *payload;
+	uint8_t checksum;
 } SerialPacket_t;
 
 typedef enum {
@@ -77,68 +81,128 @@ typedef struct {
 
 // Host commands:
 typedef enum {
-    CMD_NOP 			= 0,		// No payload, no response expected
-    CMD_PING 			= 1,		// Ping, no payload, RSP_PING response expected
-    CMD_STATUS 			= 2,		// Request status from OAE, no payload, multiple RSP_TEXT responses expected
-	CMD_BUF_REQ 		= 3,		// Payload: 1 byte: U8, Request buffer # from OAE
-	CMD_BUF_START 		= 4,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
-	CMD_BUF 			= 5,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
-	CMD_BUF_END 		= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
-	CMD_I2C_RD		 	= 7,		// Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
-	CMD_I2C_WR			= 8,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
-	CMD_START			= 9, 		// Payload: 1 byte: U8, which command to start, RSP_ACK or RSP_ERR response expected
+	CMD_NOP 			= 0,		// No payload, no response expected
+  CMD_RESET     = 1,    // No payload, RSP_RESET response expected
+	CMD_PING 			= 2,		// Ping, no payload, RSP_PING response expected
+	CMD_STATUS 			= 3,		// Request status from OAE, no payload, multiple RSP_TEXT responses expected
+	CMD_BUF_REQ 		= 4,		// Payload: 1 byte: U8, Request buffer # from OAE
+	CMD_BUF_START 		= 5,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer. RSP_ACK or RSP_ERR response expected
+	CMD_BUF 			= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. No response expected (there will be 62 of these packets in a 4096 sample buffer)
+	CMD_BUF_END 		= 7,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer. RSP_ACK or RSP_ERR response expected
+	CMD_I2C_RD		 	= 8,		// Payload: 2 bytes: U8 I2C device address, U8 I2C register address, RSP_U8 response expected (I2C read data)
+	CMD_I2C_WR			= 9,		// Payload: 3 bytes: U8 I2C device address, U8 I2C register address, U8 I2C write data, RSP_ACK or RSP_ERR response expected
 	CMD_STOP			= 10,		// Payload: 1 byte: U8, which command to stop, RSP_ACK or RSP_ERR response expected
-    CMD_OK 				= 11,		// No payload
+	CMD_OK 				= 11,		// No payload
+  CMD_OAE_TEST  = 12,   // No payload
 } PacketCommand_t;
 
 // OAE Embedded device responses:
 typedef enum  {
-    RSP_PING 			= 101,		// Ping response, no payload
-    RSP_ACK 			= 102,		// No payload
-    RSP_NAK 			= 103,		// No payload
-    RSP_ERR 			= 104,		// Payload: Up to 250 bytes, text string
-    RSP_TEXT 			= 105,		// Payload: Up to 250 bytes, text string
-	RSP_BUF_START 		= 106,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer
-	RSP_BUF 			= 107,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data.
-	RSP_BUF_END			= 108,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer
-    RSP_U8 				= 109,		// Payload: 1 byte:  U8
-    RSP_U32 			= 110,		// Payload: 4 bytes: U32
-	RSP_EVENT			= 111,		// Payload: 1 byte:  U8 (event number)
-    RSP_INVALID 		= 112,		// No payload (Command from host was not recognized)
+  RSP_HEARTBEAT = 0,    // Heartbeat response, no payload
+	RSP_PING 			= 1,		// Ping response, no payload
+	RSP_ACK 			= 2,		// No payload
+	RSP_NAK 			= 3,		// No payload
+	RSP_ERR 			= 4,		// Payload: Up to 250 bytes, text string
+	RSP_TEXT 			= 5,		// Payload: Up to 250 bytes, text string
+	RSP_BUF_START 		= 6,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. First packet of the buffer
+	RSP_BUF 			= 7,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data.
+	RSP_BUF_END			= 8,		// Payload: byte 0: BufferDataType_t, bytes 1 to N: buffer data. Last packet of the buffer
+	RSP_U8 				= 9,		// Payload: 1 byte:  U8
+	RSP_U32 			= 10,		// Payload: 4 bytes: U32
+	RSP_EVENT			= 11,		// Payload: 1 byte:  U8 (event number)
+	RSP_INVALID 		= 12,		// No payload (Command from host was not recognized)
+	RSP_LOG_DEBUG       = 13,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_INFO        = 14,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_WARNING     = 15,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_ERROR       = 16,      // Payload: Up to 250 bytes, text string
+	RSP_LOG_CRITICAL    = 17,      // Payload: Up to 250 bytes, text string
 } PacketResponse_t;
 
 typedef struct {
-    int rx_packet_valid_count;
-    int rx_packet_err_count;
-    int rx_packet_err;
-    int tx_packet_count;
-    int tx_packet_err_count;
-    int rx_time_usec;
-    int rsp_ack_time;
-    int command_start_time;
-    int command_turnaround_time;
+  int rx_packet_valid_count;
+  int rx_packet_err_count;
+  int rx_packet_err;
+  int tx_packet_count;
+  int tx_packet_err_count;
+  int rx_time_usec;
+  int rsp_ack_time;
+  int command_start_time;
+  int command_turnaround_time;
 } SerialStats_t;
 
+/**
+ * Complete serial transmit packet.
+ */
+typedef struct {
+  PacketResponse_t packet_response;
+  uint8_t payload_size;
+  uint8_t *payload;
+} SerialResponse_t;
 
-// Action commands:
-typedef enum {
-    ACTION_NONE 		= 0,
-	ACTION_OAE_TEST 	= 1,		// Run the OAE test once (does not require a stop command)
-} ActionCommand_t;
+/**
+ * Ring serial transmit buffer.
+ * 
+ * @var buffer (SerialResponse_t): The buffer of transmit packets
+ * @var head (uint8_t): The index of next packet to send
+ * @var tail (uint8_t): The index of the next packet to enqueue
+ */
+typedef struct {
+  SerialResponse_t buffer[TRANSMIT_BUFFER_MAX_SIZE];
+  uint8_t head;
+  uint8_t tail;
+} SerialTransmitBuffer_t;
+
+/**
+ * Calculate the headroom in the serial transmit buffer.
+ */
+static inline uint8_t buffer_headroom(const SerialTransmitBuffer_t *buffer){
+  return (buffer->tail - buffer->head + TRANSMIT_BUFFER_MAX_SIZE) % (TRANSMIT_BUFFER_MAX_SIZE + 1);
+}
 
 void oae_serial_init(void);
-bool oae_start_command(ActionCommand_t action);
-bool oae_stop_command(ActionCommand_t action);
+bool oae_stop_command(PacketCommand_t command);
 void oae_fill_test_buffer(BufferDataType_t BufType);
 
 uint32_t oae_build_buf_data_payload(BufferDataType_t BufType, uint32_t Buf_starting_index, uint32_t num_samples, uint8_t *payload_buf);
 uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, uint8_t *payload_buf);
-bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *payload);
-bool oae_serial_send_error(char *error_str);
+
+/**
+ * Enqueue a serial packet in the transmit buffer.
+ *
+ * @param response (PacketResponse_t) The packet response of the packet
+ * @param payload_length (uint8_t) The length of the packet in bytes
+ * @param payload (uint8_t *) The payload of the packet
+ */
+void oae_serial_enqueue(PacketResponse_t response, uint8_t payload_size, uint8_t* payload);
+
+/**
+ * Attempt to send a serial packet from the transmit buffer.
+ */
+void oae_serial_send(void);
+
+/**
+ * Send a blocking serial packet.
+ */
+void oae_serial_send_blocking(PacketResponse_t response, uint8_t payload_size, uint8_t *payload);
+
+void oae_serial_send_error(char *error_str);
 bool oae_serial_send_buffer(BufferDataType_t BufType);
+
+/**
+ * Send a log message at a specified logging level.
+ *
+ * @param severity (ulog_level_t) The logging level to log the message
+ * @param log_str (char *) The string to send as the log message
+ */
+void oae_serial_log(ulog_level_t severity, char *log_str);
 
 bool oae_serial_receive(uint8_t rx_char);
 void oae_process_rx_packet(void);
+
+/**
+ * Send a serial heartbeat message based on HAL ticks.
+ */
+void oae_serial_heartbeat(void);
 
 int8_t RX_USB_CDC_Data(uint8_t* Buf, uint32_t *Len);
 

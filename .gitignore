@@ -52,6 +52,7 @@ Debug
 Release
 build/
 tools/logs/
+tools/oae_serial/logs/
 
 # VS Code Generated files
 */CMakePresets.json
@@ -59,6 +60,7 @@ tools/logs/
 */.vscode/settings.json
 */cmake/gcc-arm-none-eabi.cmake
 */cmake/st-project.cmake
+.vscode/
 
 # Python
 oae_venv/

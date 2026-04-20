@@ -13,6 +13,8 @@
 #include "main.h"
 #include "oae_serial.h"
 #include "oae_algorithm.h"
+#include "ulog.h"
+#include "app_lib.h"
 
 extern I2C_HandleTypeDef hi2c3;
 
@@ -25,6 +27,10 @@ SerialBuffers_t SerialBuf;
 // This struct manages the OAE algorithm data and debug information:
 oae_data_t* oae_data = 0;
 
+// circular queue for transmit
+SerialTransmitBuffer_t transmit_buffer = {.head = 0, .tail = 0};
+uint8_t buffer_packets [TRANSMIT_BUFFER_MAX_SIZE][SER_MAX_PAYLOAD_LEN];
+const char *buffer_full_warning = "Transmit buffer full, data loss likely";
 
 void oae_serial_init(void)
 {
@@ -63,32 +69,15 @@ bool oae_algorithm_test(void)
 	oae_algorithm(oae_data, SerialBuf.S32_Buffer);
 	t2 = HAL_GetTick();
 	buf_len = sprintf((char *)TxBuffer, "oae_algorithm_test: %d %d", t1-t0, t2-t1);
-    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+    oae_serial_enqueue(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
 
 	buf_len = sprintf((char *)TxBuffer, "\t times: %d %d %d %d %d", oae_data->time1 - oae_data->start_time, oae_data->time2 - oae_data->start_time, oae_data->time3 - oae_data->start_time, oae_data->time4 - oae_data->start_time, oae_data->time5 - oae_data->start_time);
-    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
+    oae_serial_enqueue(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
 
 	return true;
 }
 
-bool oae_start_command(ActionCommand_t action)
-{
-	// Start the selected action:
-	switch(action)
-	{
-		case ACTION_OAE_TEST:
-			oae_algorithm_test();
-			break;
-
-		default:
-			return false;	// invalid action command
-			break;
-	}
-
-	return true;
-}
-
-bool oae_stop_command(ActionCommand_t action)
+bool oae_stop_command(PacketCommand_t command)
 {
 	// add stop commands here
 	return true;
@@ -292,46 +281,108 @@ uint32_t oae_receive_buf_data_payload(uint8_t RxCommand, uint8_t payload_size, u
 	return samples_received;
 }
 
-// This creates a transmit packet and blocks until the data has finished sending.
-// Returns true if an error occurred.
-bool oae_serial_send(PacketCommand_t command, uint8_t payload_size, uint8_t *payload)
+void oae_serial_enqueue(PacketResponse_t response, uint8_t payload_size, uint8_t *payload)
+{
+	// bypass if buffer if full
+  if (buffer_headroom(&transmit_buffer) == 0) return;
+
+  // enqueue a warning message if buffer has one remaining message
+  if (buffer_headroom(&transmit_buffer) == 1) {
+    uint8_t buffer_full_warning_len = strlen(buffer_full_warning);
+    transmit_buffer.buffer[transmit_buffer.head].packet_response = RSP_LOG_WARNING;
+    transmit_buffer.buffer[transmit_buffer.head].payload_size = buffer_full_warning_len;
+    transmit_buffer.buffer[transmit_buffer.head].payload = buffer_packets[transmit_buffer.head];
+    memcpy(&buffer_packets[transmit_buffer.head], buffer_full_warning, buffer_full_warning_len);
+    transmit_buffer.head = (transmit_buffer.head + 1) % (TRANSMIT_BUFFER_MAX_SIZE);
+    return;
+  };
+
+  // enqueue a message normally
+  transmit_buffer.buffer[transmit_buffer.head].packet_response = response;
+  transmit_buffer.buffer[transmit_buffer.head].payload_size = payload_size;
+  transmit_buffer.buffer[transmit_buffer.head].payload = buffer_packets[transmit_buffer.head];
+  memcpy(&buffer_packets[transmit_buffer.head], payload, payload_size);
+  transmit_buffer.head = (transmit_buffer.head + 1) % (TRANSMIT_BUFFER_MAX_SIZE);
+}
+
+void oae_serial_send()
+{
+  // bypass if buffer is empty
+  if (buffer_headroom(&transmit_buffer) == TRANSMIT_BUFFER_MAX_SIZE) {
+    return;
+  }
+
+  // fetch packet at tail
+  PacketResponse_t response = transmit_buffer.buffer[transmit_buffer.tail].packet_response;
+  uint8_t payload_size = transmit_buffer.buffer[transmit_buffer.tail].payload_size;
+  uint8_t *payload = transmit_buffer.buffer[transmit_buffer.tail].payload;
+
+  // build packet
+	uint8_t tx_packet_buf[SER_MAX_PACKET_LEN];
+  uint8_t checksum = 0;
+  uint8_t tx_result;
+  int index = 0;
+  int i;
+
+  if (payload_size > SER_MAX_PAYLOAD_LEN) {
+      SerStats.tx_packet_err_count++;
+      return;
+  }
+  else SerStats.tx_packet_count++;
+
+  tx_packet_buf[index++] = (uint8_t) SER_PACKET_HEADER;
+  tx_packet_buf[index++] = (uint8_t) response;
+  tx_packet_buf[index++] = (uint8_t) payload_size;
+  for (i = 0; i< payload_size; i++) tx_packet_buf[index++] = (uint8_t) payload[i];
+
+  checksum = 0;
+  for (i = 0; i< index; i++) checksum += tx_packet_buf[i];
+  checksum = (uint8_t) checksum & 0xFF;     // checksum is the sum of all packet bytes
+  tx_packet_buf[index++] = checksum;
+
+  // send packet, only move tail if transmit is successful
+  tx_result = CDC_Transmit_FS((uint8_t *)tx_packet_buf, index);
+  if (tx_result == USBD_OK) {
+    transmit_buffer.tail = (transmit_buffer.tail + 1) % (TRANSMIT_BUFFER_MAX_SIZE);
+  }
+}
+
+void oae_serial_send_blocking(PacketResponse_t response, uint8_t payload_size, uint8_t *payload)
 {
 	uint8_t tx_packet_buf[SER_MAX_PACKET_LEN];
-    uint8_t checksum = 0;
-    uint8_t tx_result;
-    int index = 0;
-    int i;
+  uint8_t checksum = 0;
+  uint8_t tx_result;
+  int index = 0;
+  int i;
 
-    if (payload_size > SER_MAX_PAYLOAD_LEN) {
-        SerStats.tx_packet_err_count++;
-        return true;
-    }
-    else SerStats.tx_packet_count++;
+  if (payload_size > SER_MAX_PAYLOAD_LEN) {
+      SerStats.tx_packet_err_count++;
+      return;
+  }
+  else SerStats.tx_packet_count++;
 
-    tx_packet_buf[index++] = (uint8_t) SER_PACKET_HEADER;
-    tx_packet_buf[index++] = (uint8_t) command;
-    tx_packet_buf[index++] = (uint8_t) payload_size;
-    for (i = 0; i< payload_size; i++) tx_packet_buf[index++] = (uint8_t) payload[i];
+  tx_packet_buf[index++] = (uint8_t) SER_PACKET_HEADER;
+  tx_packet_buf[index++] = (uint8_t) response;
+  tx_packet_buf[index++] = (uint8_t) payload_size;
+  for (i = 0; i< payload_size; i++) tx_packet_buf[index++] = (uint8_t) payload[i];
 
-    checksum = 0;
-    for (i = 0; i< index; i++) checksum += tx_packet_buf[i];
-    checksum = (uint8_t) checksum & 0xFF;     // checksum is the sum of all packet bytes
-    tx_packet_buf[index++] = checksum;
+  checksum = 0;
+  for (i = 0; i< index; i++) checksum += tx_packet_buf[i];
+  checksum = (uint8_t) checksum & 0xFF;     // checksum is the sum of all packet bytes
+  tx_packet_buf[index++] = checksum;
 
-    do {
-    	tx_result = CDC_Transmit_FS((uint8_t *) tx_packet_buf, index);
-    } while (tx_result == USBD_BUSY);
-
-    return false;
+  do {
+    tx_result = CDC_Transmit_FS((uint8_t *) tx_packet_buf, index);
+  } while (tx_result == USBD_BUSY);
 }
 
 // Send an error response string:
-bool oae_serial_send_error(char *error_str)
+void oae_serial_send_error(char *error_str)
 {
 	uint8_t	TxBuffer[SER_MAX_PAYLOAD_LEN];
 
 	uint8_t buf_len = sprintf((char *)TxBuffer, error_str);
-    return oae_serial_send(RSP_ERR, buf_len, (uint8_t *) TxBuffer);
+  oae_serial_enqueue(RSP_ERR, buf_len, (uint8_t *) TxBuffer);
 }
 
 // Send a data buffer to the host
@@ -356,15 +407,55 @@ bool oae_serial_send_buffer(BufferDataType_t BufType)
 		return false;	// invalid BufType
 
 	buf_len = oae_build_buf_data_payload(BufType, 0, samples_per_packet, TxBuffer);
-	oae_serial_send(RSP_BUF_START, buf_len, (uint8_t *) TxBuffer);
+	oae_serial_send_blocking(RSP_BUF_START, buf_len, (uint8_t *) TxBuffer);
 	for (int i=1;i<packets_per_buffer-1;i++) {
 		buf_len = oae_build_buf_data_payload(BufType, i*samples_per_packet, samples_per_packet, TxBuffer);
-		oae_serial_send(RSP_BUF, buf_len, (uint8_t *) TxBuffer);
+		oae_serial_send_blocking(RSP_BUF, buf_len, (uint8_t *) TxBuffer);
 	}
 	buf_len = oae_build_buf_data_payload(BufType, samples_per_packet*(U24_PACKETS_PER_BUFFER-1), samples_per_packet, TxBuffer);
-	oae_serial_send(RSP_BUF_END, buf_len, (uint8_t *) TxBuffer);
+	oae_serial_send_blocking(RSP_BUF_END, buf_len, (uint8_t *) TxBuffer);
 
 	return true;
+}
+
+void oae_serial_log(ulog_level_t severity, char *log_str) {
+  uint8_t TxBuffer[SER_MAX_PAYLOAD_LEN];
+  uint8_t buf_len = sprintf((char *)TxBuffer, log_str);
+
+  PacketResponse_t logging_level;
+
+  switch(severity){
+    case ULOG_DEBUG_LEVEL:
+      logging_level = RSP_LOG_DEBUG;
+      break;
+    case ULOG_INFO_LEVEL:
+      logging_level = RSP_LOG_INFO;
+      break;
+    case ULOG_WARNING_LEVEL:
+      logging_level = RSP_LOG_WARNING;
+      break;
+    case ULOG_ERROR_LEVEL:
+      logging_level = RSP_LOG_ERROR;
+      break;
+    case ULOG_CRITICAL_LEVEL:
+      logging_level = RSP_LOG_CRITICAL;
+      break;
+    default:
+      logging_level = RSP_LOG_INFO;
+  }
+
+  oae_serial_enqueue(logging_level, buf_len, TxBuffer);
+}
+
+void oae_serial_heartbeat(void) {
+  static uint32_t time = 0;
+  static uint32_t last_heartbeat = 0;
+
+  time = HAL_GetTick();
+  if (time - last_heartbeat > 1000) {
+    oae_serial_enqueue(RSP_HEARTBEAT, 0, NULL);
+    last_heartbeat = time;
+  }
 }
 
 // This function is polled by the calling function.
@@ -452,114 +543,139 @@ void oae_process_rx_packet(void)
 
 	switch(RxPacket.command)
 	{
-		case CMD_PING:
-			oae_serial_send(RSP_PING, 0, (uint8_t *) TxBuffer);
-			break;
-		case CMD_START:
-			if (RxPacket.payload_size != 1) {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			else {
-				ret = oae_start_command((ActionCommand_t) RxPacket.payload[0]);
-				if (ret == true) oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-				else oae_serial_send(RSP_NAK, 0, (uint8_t *) TxBuffer);
-			}
-			break;
-		case CMD_STOP:
-			if (RxPacket.payload_size != 1) {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			else {
-				oae_stop_command((ActionCommand_t) RxPacket.payload[0]);
-				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-			}
-			break;
-		case CMD_STATUS:
-			buf_len = sprintf((char *)TxBuffer, "OAE_SERIAL_PROTOCOL_VERSION: %s command_turnaround_time: %d tx_packet_count: %d tx_packet_err_count: %d", OAE_SERIAL_PROTOCOL_VERSION, SerStats.command_turnaround_time, SerStats.tx_packet_count, SerStats.tx_packet_err_count);
-  	        SerStats.rx_packet_err_count = 0;
-  	        SerStats.rx_packet_valid_count = 0;
-  	        SerStats.tx_packet_count = 0;
-  	        SerStats.tx_packet_err_count = 0;
-		    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
-		    break;
-		case CMD_BUF_REQ:
+    case CMD_RESET:
+      ULOG_INFO("Resetting device");
+      GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-			if (RxPacket.payload_size != 1) {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			else {
-				BufferDataType_t BufType = RxPacket.payload[0];
-				ret = oae_serial_send_buffer(BufType);
-				if (ret == false) {
-					oae_serial_send_error(ERR_STR_INVALID_PARAMETER);
-				}
-			}
-			break;
+      __HAL_RCC_GPIOA_CLK_ENABLE();
 
-		case CMD_BUF_START:
-			cmd_buf_packet_count = 0;
-			samples_received =  oae_receive_buf_data_payload(CMD_BUF_START, RxPacket.payload_size, RxPacket.payload);
-			if (samples_received > 0) {
-				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-			} else {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			break;
-		case CMD_BUF:
-			cmd_buf_packet_count++;
-			samples_received =  oae_receive_buf_data_payload(CMD_BUF, RxPacket.payload_size, RxPacket.payload);
-			if (samples_received > 0) {
-				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-			} else {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			break;
-		case CMD_BUF_END:
-			cmd_buf_packet_count++;
-			samples_received =  oae_receive_buf_data_payload(CMD_BUF_END, RxPacket.payload_size, RxPacket.payload);
-			if (samples_received > 0) {
-				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-			} else {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			break;
-		case CMD_I2C_RD:
-			if (RxPacket.payload_size != 2) {
-				oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
-			}
-			else {
-				uint8_t i2c_device_address = RxPacket.payload[0];
-				uint8_t i2c_register_address = RxPacket.payload[1];
-				uint8_t i2c_rd_data;
+      // drive D+ and D− low to simulate unplug
+      GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
+      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+      GPIO_InitStruct.Pull = GPIO_NOPULL;
+      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+      HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-				HAL_I2C_Mem_Read(&hi2c3, i2c_device_address,
-						i2c_register_address, 1, &i2c_rd_data, 1, HAL_MAX_DELAY);
-				TxBuffer[0] = i2c_rd_data;
-			    oae_serial_send(RSP_U8, 1, (uint8_t *) TxBuffer);
-			}
-			break;
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
 
-		case CMD_I2C_WR:
-			if (RxPacket.payload_size != 3) {
-				buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
-			    oae_serial_send(RSP_TEXT, buf_len, (uint8_t *) TxBuffer);
-			}
-			else {
-				uint8_t i2c_device_address = RxPacket.payload[0];
-				uint8_t i2c_register_address = RxPacket.payload[1];
-				uint8_t i2c_wr_data = RxPacket.payload[2];
+      delay_non_blocking(50);
 
-				HAL_I2C_Mem_Write(&hi2c3, i2c_device_address,
-						i2c_register_address, 1, &i2c_wr_data, 1, HAL_MAX_DELAY);
-				oae_serial_send(RSP_ACK, 0, (uint8_t *) TxBuffer);
-			}
-			break;
+      HAL_NVIC_SystemReset();
+      break;
+    case CMD_PING:
+      ULOG_DEBUG("Running CMD_PING");
+      oae_serial_enqueue(RSP_PING, 0, (uint8_t *)TxBuffer);
+      break;
+    case CMD_STOP:
+      ULOG_DEBUG("Running CMD_STOP");
+      if (RxPacket.payload_size != 1) {
+        oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
+      } else {
+        oae_stop_command((PacketCommand_t)RxPacket.payload[0]);
+        oae_serial_send_blocking(RSP_ACK, 0, (uint8_t *)TxBuffer);
+      }
+      break;
+    case CMD_STATUS:
+      ULOG_DEBUG("Running CMD_STATUS");
+      buf_len = sprintf(
+          (char *)TxBuffer,
+          "OAE_SERIAL_PROTOCOL_VERSION: %s command_turnaround_time: %d "
+          "tx_packet_count: %d tx_packet_err_count: %d",
+          OAE_SERIAL_PROTOCOL_VERSION, SerStats.command_turnaround_time,
+          SerStats.tx_packet_count, SerStats.tx_packet_err_count);
+      SerStats.rx_packet_err_count = 0;
+      SerStats.rx_packet_valid_count = 0;
+      SerStats.tx_packet_count = 0;
+      SerStats.tx_packet_err_count = 0;
+      oae_serial_enqueue(RSP_TEXT, buf_len, (uint8_t *)TxBuffer);
+      break;
+    case CMD_BUF_REQ:
+      ULOG_DEBUG("Running CMD_BUF_REQ");
+      if (RxPacket.payload_size != 1) {
+        oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
+      } else {
+        BufferDataType_t BufType = RxPacket.payload[0];
+        ret = oae_serial_send_buffer(BufType);
+        if (ret == false) {
+          oae_serial_send_error(ERR_STR_INVALID_PARAMETER);
+        }
+      }
+      break;
+    case CMD_BUF_START:
+      ULOG_DEBUG("Running CMD_BUF_START");
+      cmd_buf_packet_count = 0;
+      samples_received = oae_receive_buf_data_payload(
+          CMD_BUF_START, RxPacket.payload_size, RxPacket.payload);
+      if (samples_received > 0) {
+        oae_serial_send_blocking(RSP_ACK, 0, (uint8_t *)TxBuffer);
+      } else {
+        oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
+      }
+      break;
+    case CMD_BUF:
+      ULOG_DEBUG("Running CMD_BUF");
+      cmd_buf_packet_count++;
+      samples_received = oae_receive_buf_data_payload(
+          CMD_BUF, RxPacket.payload_size, RxPacket.payload);
+      if (samples_received > 0) {
+        oae_serial_send_blocking(RSP_ACK, 0, (uint8_t *)TxBuffer);
+      } else {
+        oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
+      }
+      break;
+    case CMD_BUF_END:
+      ULOG_DEBUG("Running CMD_BUF_END");
+      cmd_buf_packet_count++;
+      samples_received = oae_receive_buf_data_payload(
+          CMD_BUF_END, RxPacket.payload_size, RxPacket.payload);
+      if (samples_received > 0) {
+        oae_serial_send_blocking(RSP_ACK, 0, (uint8_t *)TxBuffer);
+      } else {
+        oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
+      }
+      break;
+    case CMD_I2C_RD:
+      ULOG_DEBUG("Running CMD_I2C_RD");
+      if (RxPacket.payload_size != 2) {
+        oae_serial_send_error(ERR_STR_INVALID_PAYLOAD_SIZE);
+      } else {
+        uint8_t i2c_device_address = RxPacket.payload[0];
+        uint8_t i2c_register_address = RxPacket.payload[1];
+        uint8_t i2c_rd_data;
 
-		default:
-		    oae_serial_send(RSP_INVALID, 0, (uint8_t *) TxBuffer);
-			break;
-	}
-	SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
+        HAL_I2C_Mem_Read(&hi2c3, i2c_device_address, i2c_register_address,
+                          1, &i2c_rd_data, 1, HAL_MAX_DELAY);
+        TxBuffer[0] = i2c_rd_data;
+        oae_serial_send_blocking(RSP_U8, 1, (uint8_t *)TxBuffer);
+      }
+      break;
+    case CMD_I2C_WR:
+      ULOG_DEBUG("Running CMD_I2C_WR");
+      if (RxPacket.payload_size != 3) {
+        buf_len = sprintf((char *)TxBuffer, ERR_STR_INVALID_PAYLOAD_SIZE);
+        oae_serial_enqueue(RSP_TEXT, buf_len, (uint8_t *)TxBuffer);
+      } else {
+        uint8_t i2c_device_address = RxPacket.payload[0];
+        uint8_t i2c_register_address = RxPacket.payload[1];
+        uint8_t i2c_wr_data = RxPacket.payload[2];
+
+        HAL_I2C_Mem_Write(&hi2c3, i2c_device_address, i2c_register_address,
+                          1, &i2c_wr_data, 1, HAL_MAX_DELAY);
+        oae_serial_send_blocking(RSP_ACK, 0, (uint8_t *)TxBuffer);
+      }
+      break;
+    case CMD_OAE_TEST:
+      ULOG_DEBUG("Running CMD_OAD_TEST");
+      // TODO: add oae test sequence
+      break;
+
+    default:
+      ULOG_ERROR("Invalid serial command");
+      oae_serial_enqueue(RSP_INVALID, 0, (uint8_t *)TxBuffer);
+      break;
+    }
+    SerStats.command_turnaround_time = HAL_GetTick() - SerStats.command_start_time;
 
 }
 
