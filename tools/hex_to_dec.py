@@ -4,7 +4,6 @@
 '''
 
 import matplotlib.pyplot as plt
-import csv
 
 def hex_to_twos_complement(hex_string, bits=16):
     """

@@ -12,7 +12,6 @@ void app_setup() {
 	// Initialize oae serial protocol
 	oae_serial_init();
 
-	// Initialize ADC through I2C
 	init_adc();
 
 	// Initialize DAC timers
